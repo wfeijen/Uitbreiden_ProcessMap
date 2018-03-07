@@ -34,26 +34,25 @@ refundIssued<-n_cases((gefilteredeEventLog<-filter_activity_presence(eventLog1,a
 aantalzonderProductReceived<-n_cases(gefilteredeEventLog<-filter_precedence(gefilteredeEventLog,antecedents=c("Product received"), consequents=c("Refund issued","Special refund issued"),precedence_type = "eventually_follows",filter_method ="one_of",reverse=TRUE))
 paste0("Er zijn ",refundIssued, " gevallen met refunds. Daarvan is van ",aantalzonderProductReceived," geen product ontvangen voor de refund")
 
-debugonce(process_map_styled)
 debugonce(frequency)
 x<-frequency("relative")
 print(x)
 str(x)
-process_map_styled(gefilteredeEventLog, metric_type = frequency("relative") )
-debugonce(relative)
-process_map_styled(gefilteredeEventLog, metric_type = performance("relative") )
+debug
+enrichedProcessMap(gefilteredeEventLog ,type = frequency("absolute"))
+debugonce(edges_performance)
+process_map_styled(gefilteredeEventLog ,type = performance(FUN=min,flow_time = "inter_start_time"))
 ```
 ```{r}
-	debugonce(process_map_styled)
-	pm<-process_map_styled(gefilteredeEventLog, metric_type = frequency("relative"),render = F )
-	pm.edgese<-pm$edges_df
-	pm%>%render_graph()
+process_map_styled(gefilteredeEventLog)
 ```
 
 
 
+
+
 ```{r}
-map<-process_map_styled(gefilteredeEventLog, metric_type = frequency("relative"),render = F )
+map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = frequency("relative"),render = F )
 map$nodes_df$nieuw<-sample(1:10,nrow(map$nodes_df), replace = T)+sample(1:10,nrow(map$nodes_df), replace = T)
 map$edges_df$nieuw<-sample(1:10,nrow(map$edges_df), replace = T)+sample(1:10,nrow(map$edges_df), replace = T)
 map$edges_df$label<-map$edges_df$nieuw
@@ -72,7 +71,7 @@ map <- map %>%
 	cut_points = c(10, 12, 14, 16, 18, 20),
 	palette = "RdYlGn")
 map%>%render_graph()
-get_edge_df(map)$color<-rgb(0, 1, 1, 0.5)
-get_edge_df(map)
 ```
-
+```{r}
+map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = c(frequency("relative")),render = F )
+```

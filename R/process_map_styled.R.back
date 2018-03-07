@@ -167,30 +167,27 @@ process_map_styled <- function(eventlog
 	edges_performance <- function(precedence, metric_type) {
 
 		flow_time <- attr(metric_type, "flow_time")
-		precedence %>%
-			ungroup() %>%
-			mutate(time = case_when(flow_time == "inter_start_time" ~ as.double(next_start_time - start_time, units = attr(metric_type, "units")),
-									flow_time == "idle_time" ~ as.double(next_start_time - end_time, units = attr(metric_type, "units")))) %>%
-			group_by(act, next_act, from_id, to_id) %>%
-			summarize(value = metric_type(time), label = paste0(round(metric_type(time),2), " ", attr(metric_type, "units"))) %>%
-			na.omit() %>%
-			ungroup() %>%
-			mutate(penwidth = rescale(value, to = c(1,5))) %>%
-			mutate(label = if_end(act, "", if_end(next_act, "", label)))
+		precedence %>% ungroup() ->i1
+		i1 %>% mutate(time = case_when(flow_time == "inter_start_time" ~ as.double(next_start_time - start_time, units = attr(metric_type, "units")),flow_time == "idle_time" ~ as.double(next_start_time - end_time, units = attr(metric_type, "units")))) ->i2
+		i2 %>% group_by(act, next_act, from_id, to_id) ->i3
+		i3 %>% summarize(value = metric_type(time), label = paste0(round(metric_type(time),2), " ", attr(metric_type, "units"))) ->i4
+		i4 %>%	na.omit() ->i5
+		i5 %>%	ungroup() ->i6
+		i6 %>%	mutate(penwidth = rescale(value, to = c(1,5))) ->i7
+		i7 %>%	mutate(label = if_end(act, "", if_end(next_act, "", label))) ->i
+		return(i)
 	}
 
 	edges_frequency <- function(precedence, metric_type) {
-		precedence %>%
-			ungroup() %>%
-			group_by(act, from_id, next_act, to_id) %>%
-			summarize(n = as.double(n()),n2 = as.double(n())) %>%
-			na.omit() %>%
-			group_by(act, from_id) %>%
-			mutate(label = case_when(metric_type == "relative" ~ round(100*n/sum(n),2),
-									 metric_type == "absolute" ~ n)) %>%
-			ungroup() %>%
-			arrange(act, from_id, next_act, to_id) %>%
-			mutate(penwidth = rescale(label, to = c(1,5)))->i
+		precedence %>%ungroup()->i1
+			i1 %>% group_by(act, from_id, next_act, to_id) ->i2
+			i2 %>% summarize(n = as.double(n()),n2 = as.double(n())) ->i3
+			i3 %>% na.omit() %>% group_by(act, from_id) ->i4
+			i4 %>% mutate(label = case_when(metric_type == "relative" ~ round(100*n/sum(n),2),
+									 metric_type == "absolute" ~ n)) ->i5
+			i5 %>%	ungroup() ->i6
+			i6 %>%	arrange(act, from_id, next_act, to_id) ->i7
+			i7 %>%	mutate(penwidth = rescale(label, to = c(1,5)))->i
 		return(i)
 
 	}
@@ -251,17 +248,24 @@ process_map_styled <- function(eventlog
 	min_level <- min(nodes_df$color_level)
 	max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
 
+	#create_edge_df(from = edges$from_id,
+	#			   to = edges$to_id,
+	#			   label = #case_when( metric_type,redness_metric,blueness_metric
+	#			   				   edges$label
+	#			   					#)
+	#,
+	#			   penwidth = edges$penwidth,
+	#			   color = ifelse(perspective(metric_type) == "performance", "red4", rgb(0, 1, 1, 0.5)),
+	#			   fontname = "Arial",
+	#				n = edges$label,
+	#				xx = edges$n) -> edges_df
+	
 	create_edge_df(from = edges$from_id,
-				   to = edges$to_id,
-				   label = #case_when( metric_type,redness_metric,blueness_metric
-				   				   edges$label
-				   					#)
-	,
-				   penwidth = edges$penwidth,
-				   color = ifelse(perspective(metric_type) == "performance", "red4", rgb(0, 1, 1, 0.5)),
-				   fontname = "Arial",
-					n = edges$label,
-					xx = edges$n) -> edges_df
+	               to = edges$to_id,
+	               label = edges$label,
+	               penwidth = edges$penwidth,
+	               color = ifelse(perspective == "performance", "red4", "dodgerblue4"),
+	               fontname = "Arial") -> edges_df
 
 
 	create_graph(nodes_df, edges_df) %>%

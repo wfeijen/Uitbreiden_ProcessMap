@@ -9,10 +9,7 @@
 
 
 
-agregate <- function(FUN = mean, units = "days", flow_time = c("inter_start_time","idle_time")) {
-	flow_time <- match.arg(flow_time)
-	attr(FUN, "flow_time") <- flow_time
+agregate <- function(FUN = mean, column = !!timestamp_(eventlog)) {
 	attr(FUN, "perspective") <- "agregate"
-	attr(FUN, "units") <- units
 	return(FUN)
 }
