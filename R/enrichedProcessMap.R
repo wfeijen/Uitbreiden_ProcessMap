@@ -118,6 +118,22 @@ if_start <- function(node, true, false) {
     ifelse(node %in% c("Start"), true, false)
 }
 
+GetBasePrecedence<-function(base_log,eventlog,base_nodes){
+suppressWarnings(base_log %>%
+                     ungroup() %>%
+                     mutate(act = ordered(act, levels = c("Start", as.character(activity_labels(eventlog)), "End"))) %>%
+                     group_by(case) %>%
+                     arrange(start_time, act) %>%
+                     mutate(next_act = lead(act),
+                            next_start_time = lead(start_time),
+                            next_end_time = lead(end_time)) %>%
+                     full_join(base_nodes, by = c("act" = "act")) %>%
+                     rename(from_id = node_id) %>%
+                     full_join(base_nodes, by = c("next_act" = "act")) %>%
+                     rename(to_id = node_id) %>%
+                     select(-n.x, -n.y))
+}
+
 enrichedProcessMap <- function(eventlog
 							   , aggregationInstructions =  frequency("absolute")
 							   , render = T) {
@@ -160,20 +176,7 @@ enrichedProcessMap <- function(eventlog
             count(act) %>%
             mutate(node_id = 1:n()) -> base_nodes
         
-        suppressWarnings(base_log %>%
-                             ungroup() %>%
-                             mutate(act = ordered(act, levels = c("Start", as.character(activity_labels(eventlog)), "End"))) %>%
-                             group_by(case) %>%
-                             arrange(start_time, act) %>%
-                             mutate(next_act = lead(act),
-                                    next_start_time = lead(start_time),
-                                    next_end_time = lead(end_time)) %>%
-                             full_join(base_nodes, by = c("act" = "act")) %>%
-                             rename(from_id = node_id) %>%
-                             full_join(base_nodes, by = c("next_act" = "act")) %>%
-                             rename(to_id = node_id) %>%
-                             select(-n.x, -n.y) -> base_precedence)
-        
+        base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog,base_nodes = base_nodes)
         
 
         perspective <- attr(aggregationInstructions, "perspective")

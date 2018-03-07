@@ -43,25 +43,6 @@ str(x)
 
 ```{r}
 map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = frequency("relative"),render = F )
-map$nodes_df$nieuw<-sample(1:10,nrow(map$nodes_df), replace = T)+sample(1:10,nrow(map$nodes_df), replace = T)
-map$edges_df$nieuw<-sample(1:10,nrow(map$edges_df), replace = T)+sample(1:10,nrow(map$edges_df), replace = T)
-map$edges_df$label<-map$edges_df$nieuw
-map.nodes<-map$nodes_df
-map.edges<-map$edges_df
-map%>%export_graph(file_name = "../globalPerformanceGraph.png",  file_type = "PNG")
-map$edges_df<-map$edges_df[map$edges_df$nieuw>10.0,]
-map%>%export_graph(file_name = "../globalPerformanceGraph_naFilteren.png",  file_type = "PNG")
-map%>%render_graph(layout = "visNetwork")
-map$edges_df$color<-rgb(0, 1, 1, 0.5)
-#map$nodes_df$size=0.001
-map <- map %>%
-	colorize_edge_attrs(
-	edge_attr_from = nieuw,
-	edge_attr_to = color,
-	cut_points = c(10, 12, 14, 16, 18, 20),
-	palette = "RdYlGn")
 map%>%render_graph()
 ```
-```{r}
-map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = c(frequency("relative")),render = F )
-```
+
