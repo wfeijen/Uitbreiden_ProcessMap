@@ -118,7 +118,12 @@ if_start <- function(node, true, false) {
     ifelse(node %in% c("Start"), true, false)
 }
 
-GetBasePrecedence<-function(base_log,eventlog,base_nodes){
+GetBasePrecedence<-function(base_log,eventlog){
+    base_log %>%
+        ungroup() %>%
+        count(act) %>%
+        mutate(node_id = 1:n()) -> base_nodes
+    
 suppressWarnings(base_log %>%
                      ungroup() %>%
                      mutate(act = ordered(act, levels = c("Start", as.character(activity_labels(eventlog)), "End"))) %>%
@@ -171,15 +176,12 @@ enrichedProcessMap <- function(eventlog
         base_log  %>%
             bind_rows(end_points) -> base_log
         
-        base_log %>%
-            ungroup() %>%
-            count(act) %>%
-            mutate(node_id = 1:n()) -> base_nodes
+
         
-        base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog,base_nodes = base_nodes)
+        base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog)
         
 
-        perspective <- attr(aggregationInstructions, "perspective")
+                perspective <- attr(aggregationInstructions, "perspective")
         
         
         if(perspective == "frequency") {
