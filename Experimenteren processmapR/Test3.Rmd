@@ -42,6 +42,7 @@ str(x)
 
 
 ```{r}
+#debugonce(GetBasicNodes)
 map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = frequency("relative"),render = F )
 map%>%render_graph()
 ```

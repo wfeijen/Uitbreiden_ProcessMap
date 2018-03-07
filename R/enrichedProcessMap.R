@@ -34,7 +34,9 @@ CreateBaseLog<-function(eventlog){
                time = !!timestamp_(eventlog)) %>%
         group_by(act, aid, case) %>%
         summarize(start_time = min(time),
-                  end_time = max(time))
+                  end_time = max(time))->base_log
+    base_log  %>%
+        bind_rows(GetEndPoints(baseLog = base_log)) -> base_log
 }
 
 GetEndPoints<-function(baseLog){
@@ -63,21 +65,36 @@ nodes_performance <- function(precedence, aggregationInstructions) {
                label = if_end(act, act, tooltip))
 }
 
-nodes_frequency <- function(precedence, aggregationInstructions) {
+nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
     
+    (precedence %>%
+        group_by(act, from_id) %>%
+        inner_join(nodes) %>%
+        summarize(n = as.double(n())) %>%
+        ungroup() %>%
+        mutate(temp = case_when(aggregationInstructions == "relative" ~ n/sum(n),
+                                 aggregationInstructions == "absolute" ~ n)) %>%
+        na.omit())$temp->temp
+    nodes<-cbind(nodes,temp)
+    names(nodes)[names(nodes)=="temp"] <- paste0("freq_",aggregationInstructions)
+    nodes
+}
+
+GetBasicNodes <- function(precedence) {
     precedence %>%
         group_by(act, from_id) %>%
         summarize(n = as.double(n())) %>%
         ungroup() %>%
-        mutate(label = case_when(aggregationInstructions == "relative" ~ n/sum(n),
-                                 aggregationInstructions == "absolute" ~ n)) %>%
+        mutate(label = 0) %>%
         mutate(color_level = label,
                shape = if_end(act,"circle","rectangle"),
                fontcolor = if_end(act, if_start(act, "chartreuse4","brown4"),  ifelse(label <= quantile(label, 0.4), "black","white")),
                color = if_end(act, if_start(act, "chartreuse4","brown4"),"grey"),
                tooltip = paste0(act, "\n (", round(label, 2), ")"),
                label = if_end(act, act, tooltip)) %>%
-        na.omit()
+        na.omit()->nodes
+    i<-1
+    nodes
 }
 
 
@@ -171,21 +188,12 @@ enrichedProcessMap <- function(eventlog
         
         
         base_log<-CreateBaseLog(eventlog = eventlog)
-        end_points<-GetEndPoints(baseLog = base_log)
-        
-        base_log  %>%
-            bind_rows(end_points) -> base_log
-        
-
-        
         base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog)
-        
-
-                perspective <- attr(aggregationInstructions, "perspective")
-        
+        nodes<-GetBasicNodes(base_precedence)
+        perspective <- attr(aggregationInstructions, "perspective")
         
         if(perspective == "frequency") {
-            nodes_frequency(base_precedence, aggregationInstructions) -> nodes
+            nodes_frequency(nodes,base_precedence, aggregationInstructions) -> nodes
         } else if(perspective == "performance")
             nodes_performance(base_precedence, aggregationInstructions) -> nodes
         
