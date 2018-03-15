@@ -163,7 +163,7 @@ suppressWarnings(base_log %>%
                      select(-n.x, -n.y))
 }
 
-getNodesAggregation <- function(nodes,base_precedence,aggregationInstruction)
+getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
 {
     perspective <- attr(aggregationInstruction, "perspective")
     if(perspective == "frequency") {
@@ -172,7 +172,7 @@ getNodesAggregation <- function(nodes,base_precedence,aggregationInstruction)
         nodes_performance(base_precedence, aggregationInstruction) -> nodes
 }
 
-getEdgesAggregation <- function(nodes,base_precedence,aggregationInstruction)
+getEdgesAggregation <- function(aggregationInstruction,nodes,base_precedence)
 {
     if(perspective == "frequency") {
         edges_frequency(base_precedence, aggregationInstruction) -> edges
@@ -231,10 +231,10 @@ enrichedProcessMap <- function(eventlog
                        tooltip = nodes$tooltip,
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
-        
-        x<-getNodesAggregation(nodes,base_precedence
-                               ,aggregationInstruction = aggregationInstructions[[1]])
-        nodes_df<-cbind(nodes_df,x)
+        aggregatedColumns<-as.data.table(lapply(aggregationInstructions,getNodesAggregation,nodes,base_precedence))
+        #x<-getNodesAggregation(aggregationInstruction = aggregationInstructions[[1]],
+        #                       nodes,base_precedence)
+        nodes_df<-cbind(nodes_df,aggregatedColumns)
         
         min_level <- min(nodes_df$color_level)
         max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
@@ -259,6 +259,5 @@ enrichedProcessMap <- function(eventlog
             graph %>% render_graph() %>% return()
         } else
             graph %>% return()
-        
     }
     
