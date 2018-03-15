@@ -50,19 +50,13 @@ GetEndPoints<-function(baseLog){
 }
 
 nodes_performance <- function(precedence, aggregationInstructions) {
-    
-    precedence %>%
+    (precedence %>%
         mutate(duration = as.double(end_time-start_time, units = attr(aggregationInstructions, "units"))) %>%
         group_by(act, from_id) %>%
-        summarize(label = aggregationInstructions(duration)) %>%
+        summarize(duration = aggregationInstructions(duration)) %>%
         na.omit() %>%
-        ungroup() %>%
-        mutate(color_level = label,
-               shape = if_end(act,"circle","rectangle"),
-               fontcolor = if_end(act, if_start(act, "chartreuse4","brown4"),  ifelse(label <= quantile(label, 0.65), "black","white")),
-               color = if_end(act, if_start(act, "chartreuse4","brown4"),"grey"),
-               tooltip = paste0(act, "\n (", round(label, 2), " ",attr(aggregationInstructions, "units"),")"),
-               label = if_end(act, act, tooltip))
+        ungroup())$duration->duration
+        nodes<-cbind(nodes,temp)
 }
 
 nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
@@ -115,6 +109,18 @@ edges_performance <- function(precedence, aggregationInstructions) {
         mutate(label = if_end(act, "", if_end(next_act, "", label)))
 }
 
+GetBasicEdges <- function(precedence) {
+    precedence %>%
+        ungroup() %>%
+        group_by(act, from_id, next_act, to_id) %>%
+        summarize(n = as.double(n())) %>%
+        na.omit() %>%
+        group_by(act, from_id) %>%
+        mutate(label = 0) %>%
+        ungroup() %>%
+        mutate(penwidth = rescale(label, to = c(1,5)))
+}
+
 edges_frequency <- function(precedence, aggregationInstructions) {
     precedence %>%
         ungroup() %>%
@@ -156,8 +162,25 @@ suppressWarnings(base_log %>%
                      select(-n.x, -n.y))
 }
 
+getNodesAggregation <- function(nodes,base_precedence,aggregationInstruction)
+{
+    perspective <- attr(aggregationInstruction, "perspective")
+    if(perspective == "frequency") {
+        nodes_frequency(nodes,base_precedence, aggregationInstruction) -> nodes
+    } else if(perspective == "performance")
+        nodes_performance(base_precedence, aggregationInstruction) -> nodes
+}
+
+getEdgesAggregation <- function(nodes,base_precedence,aggregationInstruction)
+{
+    if(perspective == "frequency") {
+        edges_frequency(base_precedence, aggregationInstruction) -> edges
+    } else if(perspective == "performance")
+        edges_performance(base_precedence, aggregationInstruction) -> edges
+}
+
 enrichedProcessMap <- function(eventlog
-							   , aggregationInstructions =  frequency("absolute")
+							   , aggregationInstructions =  list(frequency("absolute"))
 							   , render = T) {
         act <- NULL
         aid <- NULL
@@ -190,19 +213,11 @@ enrichedProcessMap <- function(eventlog
         base_log<-CreateBaseLog(eventlog = eventlog)
         base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog)
         nodes<-GetBasicNodes(base_precedence)
-        perspective <- attr(aggregationInstructions, "perspective")
-        
-        if(perspective == "frequency") {
-            nodes_frequency(nodes,base_precedence, aggregationInstructions) -> nodes
-        } else if(perspective == "performance")
-            nodes_performance(base_precedence, aggregationInstructions) -> nodes
-        
-        
-        if(perspective == "frequency") {
-            edges_frequency(base_precedence, aggregationInstructions) -> edges
-        } else if(perspective == "performance")
-            edges_performance(base_precedence, aggregationInstructions) -> edges
-        
+        edges<-GetBasicEdges(base_precedence)
+        print(aggregationInstructions)
+        x<-getNodesAggregation(nodes,base_precedence
+                        ,aggregationInstruction = aggregationInstructions[[1]])
+
         
         nodes %>%
             mutate(color_level = rescale(color_level)) %>%
@@ -227,14 +242,14 @@ enrichedProcessMap <- function(eventlog
                        to = edges$to_id,
                        label = edges$label,
                        penwidth = edges$penwidth,
-                       color = ifelse(perspective == "performance", "red4", "dodgerblue4"),
+                       #color = ifelse(perspective == "performance", "red4", "dodgerblue4"),
                        fontname = "Arial") -> edges_df
         
         create_graph(nodes_df, edges_df) %>%
             set_global_graph_attrs(attr = "rankdir", value = "LR",attr_type = "graph") %>%
             colorize_node_attrs(node_attr_from = "color_level",
                                 node_attr_to = "fillcolor",
-                                palette = ifelse(perspective == "performance", "Reds", "PuBu"),
+                                #palette = ifelse(perspective == "performance", "Reds", "PuBu"),
                                 default_color = "white",
                                 cut_points = seq(min_level-0.1, max_level+.1, length.out = 9)) -> graph
         
