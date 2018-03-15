@@ -50,28 +50,29 @@ GetEndPoints<-function(baseLog){
 }
 
 nodes_performance <- function(precedence, aggregationInstructions) {
-    (precedence %>%
-        mutate(duration = as.double(end_time-start_time, units = attr(aggregationInstructions, "units"))) %>%
+    temp<-precedence %>%
+        mutate(duration = as.double(end_time-start_time
+                                    , units = attr(aggregationInstructions, "units"))) %>%
         group_by(act, from_id) %>%
-        summarize(duration = aggregationInstructions(duration)) %>%
+        summarize(aggr = aggregationInstructions(duration)) %>%
         na.omit() %>%
-        ungroup())$duration->duration
-        nodes<-cbind(nodes,temp)
+        select(aggr)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
 }
 
 nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
-    
-    (precedence %>%
+    temp<-precedence %>%
         group_by(act, from_id) %>%
         inner_join(nodes) %>%
         summarize(n = as.double(n())) %>%
         ungroup() %>%
         mutate(temp = case_when(aggregationInstructions == "relative" ~ n/sum(n),
                                  aggregationInstructions == "absolute" ~ n)) %>%
-        na.omit())$temp->temp
-    nodes<-cbind(nodes,temp)
-    names(nodes)[names(nodes)=="temp"] <- paste0("freq_",aggregationInstructions)
-    nodes
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
 }
 
 GetBasicNodes <- function(precedence) {
@@ -214,10 +215,6 @@ enrichedProcessMap <- function(eventlog
         base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog)
         nodes<-GetBasicNodes(base_precedence)
         edges<-GetBasicEdges(base_precedence)
-        print(aggregationInstructions)
-        x<-getNodesAggregation(nodes,base_precedence
-                        ,aggregationInstruction = aggregationInstructions[[1]])
-
         
         nodes %>%
             mutate(color_level = rescale(color_level)) %>%
@@ -234,6 +231,10 @@ enrichedProcessMap <- function(eventlog
                        tooltip = nodes$tooltip,
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
+        
+        x<-getNodesAggregation(nodes,base_precedence
+                               ,aggregationInstruction = aggregationInstructions[[1]])
+        nodes_df<-cbind(nodes_df,x)
         
         min_level <- min(nodes_df$color_level)
         max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
