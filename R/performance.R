@@ -9,10 +9,15 @@
 
 
 
-performance <- function(FUN = mean, units = "days", flow_time = c("inter_start_time","idle_time")) {
+performance <- function(FUN = mean, units = "days", flow_time = c("inter_start_time","idle_time"),colomnName = NULL) {
 	flow_time <- match.arg(flow_time)
 	attr(FUN, "flow_time") <- flow_time
 	attr(FUN, "perspective") <- "performance"
 	attr(FUN, "units") <- units
+	if (is.null(colomnName)) { 
+	    attr(FUN, "colomnName") <- paste0("performance_",units)
+	} else {
+	    attr(FUN, "colomnName") <- colomnName
+	}
 	return(FUN)
 }
