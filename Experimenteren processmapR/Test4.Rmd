@@ -18,14 +18,11 @@ library(DiagrammeR)
 library(data.table)
 #library(DiagrammeRsvg)
 
-csvLog<-read.table("../3.0 RefundProcess.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
+csvLog<-read.table("../3.0 RefundProcessSelectie.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
 csvLog$status = "complete"
 csvLog$activity_instance = 1:nrow(csvLog)
-csvLog$timestamp<-as.POSIXct(strptime(csvLog$Complete.timestamp, "%d-%m-%Y  %H:%M"))
+csvLog$startmoment<-as.POSIXct(strptime(csvLog$startmoment, "%d-%m-%Y  %H:%M"))
 csvLog$eindmoment<-as.POSIXct(strptime(csvLog$eindmoment, "%d-%m-%Y  %H:%M"))
-
-startmoment="timestamp"
-eindmoment="eindmoment"
 
 
 lengteLogIngelezen<-nrow(csvLog)
@@ -33,27 +30,17 @@ nrMissendeCaseIds<-sum(is.na(csvLog$CaseId))
 nrMissendeActiviteitNamen<-sum(is.na(csvLog$Activiteit))
 kolomNamen<-colnames(csvLog)
 csvLog$activity_instance = 1:nrow(csvLog)
-if (startmoment %in% kolomNamen) {
-    if (eindmoment %in% kolomNamen) {# Start en eindmoment. Aanpassen logfile
-        csvLogStart<-data.table(csvLog)
-        colnames(csvLogStart)[which(colnames(csvLogStart) == startmoment)] <- "timeStampTemp"
-        csvLogStart$status<-statusStart
-        csvLogStart$EindMoment<-NULL
-        csvLogEind<-csvLog
-        colnames(csvLogEind)[which(colnames(csvLogEind) == eindmoment)] <- "timeStampTemp"
-        csvLogEind$StartMoment<-NULL
-        csvLogEind$status<-statusEind
-        csvLog<-rbind(csvLogStart,csvLogEind)
-        rm(csvLogStart,csvLogEind)
-    }
-}
-
-csvLog<-na.omit(csvLog,cols=c("CaseId","Activiteit","timeStampTemp"))
+csvLogStart<-data.table(csvLog)
+csvLogStart$timeStamp<-csvLogStart$startmoment
+csvLogStart$status<-"start"
+csvLogEind<-csvLog
+csvLogEind$timeStamp<-csvLogEind$eindmoment
+csvLogEind$status<-"eind"
+csvLog<-rbind(csvLogStart,csvLogEind)
+rm(csvLogStart,csvLogEind)
 
 
-refundIssued<-n_cases((gefilteredeEventLog<-filter_activity_presence(eventLog1,activities = c("Refund issued","Special refund issued"),method ="one_of")))
-aantalzonderProductReceived<-n_cases(gefilteredeEventLog<-filter_precedence(gefilteredeEventLog,antecedents=c("Product received"), consequents=c("Refund issued","Special refund issued"),precedence_type = "eventually_follows",filter_method ="one_of",reverse=TRUE))
-paste0("Er zijn ",refundIssued, " gevallen met refunds. Daarvan is van ",aantalzonderProductReceived," geen product ontvangen voor de refund")
+csvLog<-na.omit(csvLog,cols=c("OrderNr","Status","timeStamp"))
 ```
 We houden: `r nrow(csvLog)` regels van de `r lengteLogVoorVerwijderen` regels uit de oorspronkelijke log over, ofwel `r round(nrow(csvLog)*100/lengteLogVoorVerwijderen,digits = 2)`%.
 
@@ -64,49 +51,47 @@ colnames(csvLog)
 
 #Omzetten naar een processmining Log 2017-07-01 00:00:00.000
 ```{r echo=FALSE, warning=FALSE}
-csvLog$timeStamp<-as.POSIXct(strptime(csvLog$timeStampTemp, "%Y-%m-%d %H:%M:%OS"),tz="GMT")
-#csvLog$timeStampTemp<-NULL
 if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
 eventLog.Base<-eventlog(csvLog,
-        case_id = "CaseId",
-        activity_id = "Activiteit",
+        case_id = "OrderNr",
+        activity_id = "Status",
         activity_instance_id = "activity_instance",
         lifecycle_id = "status",
         timestamp = "timeStamp",
-        resource_id = "Werknemer"
+        resource_id = "Employee"
     )
-```
 
-#Inlezen startpunten en eindpunten
-```{r echo=FALSE, warning=FALSE}
-vectorStartActiviteiten<-read.table(csvStartActiviteitenFileName,header = F, sep = ";",na = c("","n.v.t.","onbekend"))$V1
-if(length(vectorStartActiviteiten)==0) {print("Geen startactiviteiten gedefieerd")}
-vectorEindActiviteiten<-read.table(csvEindActiviteitenFileName,header = F, sep = ";",na = c("","n.v.t.","onbekend"))$V1
-if(length(vectorEindActiviteiten)==0) {print("Geen eindactiviteiten gedefieerd")}
-```
-
-```{r}
-#debugonce(enrichedProcessMap)
-#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
-map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = list(frequency("relative"),frequency("absolute","freq_absolute")),render = F )
-map%>%render_graph()
-map.nodes<-map$nodes_df
-```
-```{r}
-#debugonce(enrichedProcessMap)
-#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
-map<-process_map(gefilteredeEventLog,performance(),render = F )
-map%>%render_graph()
-map.nodes<-map$nodes_df
 ```
 
 
 ```{r}
 #debugonce(enrichedProcessMap)
 #map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
-map<-enrichedProcessMap(gefilteredeEventLog, aggregationInstructions = list(performance()),render = F )
+map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = list(frequency("relative"),frequency("absolute","freq_absolute")),render = F )
 map%>%render_graph()
 map.nodes<-map$nodes_df
+map.edges<-map$edges_df
+```
+```{r}
+#debugonce(enrichedProcessMap)
+#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
+map<-process_map(eventLog.Base,performance(),render = F )
+map%>%render_graph()
+```
+
+
+```{r}
+#debugonce(enrichedProcessMap)
+#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
+aggregationInst = list(performance( FUN = max, ,colomnName = "max_perf"),
+                       performance( FUN = mean, ,colomnName = "mean_perf"),
+                       performance( FUN = min, ,colomnName = "min_perf"),
+                       frequency("relative"),
+                       frequency("absolute","freq_absolute"))
+map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = aggregationInst,render = F )
+map%>%render_graph()
+map.nodes<-map$nodes_df
+map.edges<-map$edges_df
 ```
 
 

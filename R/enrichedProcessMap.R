@@ -49,31 +49,7 @@ GetEndPoints<-function(baseLog){
         mutate(end_time = recode(act, "Start" = start_time, .default = end_time))
 }
 
-nodes_performance <- function(precedence, aggregationInstructions) {
-    temp<-precedence %>%
-        mutate(duration = as.double(end_time-start_time
-                                    , units = attr(aggregationInstructions, "units"))) %>%
-        group_by(act, from_id) %>%
-        summarize(aggr = aggregationInstructions(duration)) %>%
-        na.omit() %>%
-        select(aggr)
-    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
-    return(temp)
-}
 
-nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
-    temp<-precedence %>%
-        group_by(act, from_id) %>%
-        inner_join(nodes) %>%
-        summarize(n = as.double(n())) %>%
-        ungroup() %>%
-        mutate(temp = case_when(aggregationInstructions == "relative" ~ n/sum(n),
-                                 aggregationInstructions == "absolute" ~ n)) %>%
-        na.omit() %>%
-        select(temp)
-    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
-    return(temp)
-}
 
 GetBasicNodes <- function(precedence) {
     precedence %>%
@@ -97,21 +73,37 @@ edges_performance <- function(precedence, aggregationInstructions) {
     
     flow_time <- attr(aggregationInstructions, "flow_time")
     
-    precedence %>%
+    temp <- precedence %>%
         ungroup() %>%
         mutate(time = case_when(flow_time == "inter_start_time" ~ as.double(next_start_time - start_time, units = attr(aggregationInstructions, "units")),
                                 flow_time == "idle_time" ~ as.double(next_start_time - end_time, units = attr(aggregationInstructions, "units")))) %>%
         group_by(act, next_act, from_id, to_id) %>%
-        summarize(value = aggregationInstructions(time),
-                  label = paste0(round(aggregationInstructions(time),2), " ", attr(aggregationInstructions, "units"))) %>%
+        summarize(aggr = aggregationInstructions(time)) %>%
         na.omit() %>%
         ungroup() %>%
-        mutate(penwidth = rescale(value, to = c(1,5))) %>%
-        mutate(label = if_end(act, "", if_end(next_act, "", label)))
+        mutate(temp = aggr) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
+}
+
+nodes_performance <- function(precedence, aggregationInstructions) {
+    temp <- precedence %>%
+        mutate(duration = as.double(end_time-start_time
+                                    , units = attr(aggregationInstructions, "units"))) %>%
+        group_by(act, from_id) %>%
+        summarize(aggr = aggregationInstructions(duration)) %>%
+        ungroup () %>%
+        mutate(temp = aggr) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
 }
 
 GetBasicEdges <- function(precedence) {
-    precedence %>%
+    temp <- precedence %>%
         ungroup() %>%
         group_by(act, from_id, next_act, to_id) %>%
         summarize(n = as.double(n())) %>%
@@ -123,16 +115,31 @@ GetBasicEdges <- function(precedence) {
 }
 
 edges_frequency <- function(precedence, aggregationInstructions) {
-    precedence %>%
+    temp <- precedence %>%
         ungroup() %>%
         group_by(act, from_id, next_act, to_id) %>%
         summarize(n = as.double(n())) %>%
-        na.omit() %>%
-        group_by(act, from_id) %>%
-        mutate(label = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
-                                 aggregationInstructions == "absolute" ~ n)) %>%
         ungroup() %>%
-        mutate(penwidth = rescale(label, to = c(1,5)))
+        mutate(temp = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+                                 aggregationInstructions == "absolute" ~ n)) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
+}
+
+nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
+    temp <- precedence %>%
+        group_by(act, from_id) %>%
+        inner_join(nodes) %>%
+        summarize(n = as.double(n())) %>%
+        ungroup() %>%
+        mutate(temp = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+                                aggregationInstructions == "absolute" ~ n)) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
 }
 
 if_end <- function(node, true, false) {
@@ -172,8 +179,9 @@ getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
         nodes_performance(base_precedence, aggregationInstruction) -> nodes
 }
 
-getEdgesAggregation <- function(aggregationInstruction,nodes,base_precedence)
+getEdgesAggregation <- function(aggregationInstruction,base_precedence)
 {
+    perspective <- attr(aggregationInstruction, "perspective")
     if(perspective == "frequency") {
         edges_frequency(base_precedence, aggregationInstruction) -> edges
     } else if(perspective == "performance")
@@ -245,6 +253,9 @@ enrichedProcessMap <- function(eventlog
                        penwidth = edges$penwidth,
                        #color = ifelse(perspective == "performance", "red4", "dodgerblue4"),
                        fontname = "Arial") -> edges_df
+        
+        aggregatedEdges<-as.data.table(lapply(aggregationInstructions,getEdgesAggregation,base_precedence))
+        edges_df <- cbind(edges_df, aggregatedEdges)
         
         create_graph(nodes_df, edges_df) %>%
             set_global_graph_attrs(attr = "rankdir", value = "LR",attr_type = "graph") %>%
