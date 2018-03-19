@@ -1,0 +1,9 @@
+OrderNr;Status;Employee;startmoment;Channel;RandomWaarde1;RandomWaarde2;eindmoment
+Case1;Order created;Resource 1;12-12-2011 00:00;Dealer;323;326;13-12-2011 00:00
+Case1;Shipment via logistics partner;Resource 2;14-12-2011 00:00;Dealer;33;52;15-12-2011 00:00
+Case10;Order created;Resource 1;12-12-2011 00:00;Dealer;68;105;14-12-2011 00:00
+Case10;Shipment via logistics partner;Resource 2;16-12-2011 00:00;Dealer;299;300;18-12-2011 00:00
+Case100;Order created;Resource 1;12-12-2011 00:00;Callcenter;146;250;15-12-2011 00:00
+Case100;Shipment via logistics partner;Resource 3;18-12-2011 00:00;Callcenter;218;258;21-12-2011 00:00
+Case1000;Order created;Resource 1;1-12-2011 00:00;Callcenter;146;250;6-12-2011 00:00
+Case1000;Shipment via logistics partner;Resource 3;11-12-2011 00:00;Callcenter;218;258;16-12-2011 00:00

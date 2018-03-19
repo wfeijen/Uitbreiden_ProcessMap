@@ -4,7 +4,6 @@
 #' @description A function for creating a process map of an event log.
 #' @param eventlog The event log object for which to create a process map
 #' @param type Defines the type of metric shown by the with of the edges, which can be created with the functions frequency and performance. The first type focusses on the frequency aspect of a process, while the second one focussed on processing time.
-#' @param render Whether the map should be rendered immediately (default), or rather an object of type dgr_graph should be returned.
 #'
 #' @examples
 #' \dontrun{
@@ -102,6 +101,19 @@ nodes_performance <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
+nodes_colomAgregate <- function(precedence, aggregationInstructions) {
+    column <-  attr(aggregationInstructions, "colomnName")
+    temp <- precedence %>%
+        group_by(act, from_id) %>%
+        summarize(aggr = aggregationInstructions(select(one_of(c(column))))) %>%
+        ungroup () %>%
+        mutate(temp = aggr) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(paste0(column,"_", deparse(substitute(aggregationInstructions))))
+    return(temp)
+}
+
 GetBasicEdges <- function(precedence) {
     temp <- precedence %>%
         ungroup() %>%
@@ -173,24 +185,24 @@ suppressWarnings(base_log %>%
 getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
 {
     perspective <- attr(aggregationInstruction, "perspective")
-    if(perspective == "frequency") {
-        nodes_frequency(nodes,base_precedence, aggregationInstruction) -> nodes
-    } else if(perspective == "performance")
-        nodes_performance(base_precedence, aggregationInstruction) -> nodes
+    if(perspective == "frequency") 
+        nodes_frequency(nodes,base_precedence, aggregationInstruction)
+    else if(perspective == "performance") 
+        nodes_performance(base_precedence, aggregationInstruction)
+    else if(perspective == "colomAgregate") 
+        nodes_colomAgregate(base_precedence, aggregationInstruction)
 }
 
 getEdgesAggregation <- function(aggregationInstruction,base_precedence)
 {
     perspective <- attr(aggregationInstruction, "perspective")
     if(perspective == "frequency") {
-        edges_frequency(base_precedence, aggregationInstruction) -> edges
+        edges_frequency(base_precedence, aggregationInstruction)
     } else if(perspective == "performance")
-        edges_performance(base_precedence, aggregationInstruction) -> edges
+        edges_performance(base_precedence, aggregationInstruction)
 }
 
-enrichedProcessMap <- function(eventlog
-							   , aggregationInstructions =  list(frequency("absolute"))
-							   , render = T) {
+enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(frequency("absolute"))) {
         act <- NULL
         aid <- NULL
         case <- NULL
@@ -266,9 +278,6 @@ enrichedProcessMap <- function(eventlog
                                 cut_points = seq(min_level-0.1, max_level+.1, length.out = 9)) -> graph
         
         
-        if(render == T) {
-            graph %>% render_graph() %>% return()
-        } else
-            graph %>% return()
+        graph %>% return()
     }
     
