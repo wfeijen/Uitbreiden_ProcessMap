@@ -24,16 +24,27 @@
 #	2- as an absolute number>1 (I.E. 10 shows at most 10 edges)
 
 CreateBaseLog<-function(eventlog){
-    eventlog %>%
-        as.data.frame() %>%
-        droplevels %>%
-        select(act = !!activity_id_(eventlog),
-               aid = !!activity_instance_id_(eventlog),
-               case = !!case_id_(eventlog),
-               time = !!timestamp_(eventlog)) %>%
-        group_by(act, aid, case) %>%
-        summarize(start_time = min(time),
-                  end_time = max(time))->base_log
+    tempEventLog <- eventlog %>%
+                    as.data.table() %>%
+                    droplevels %>%
+                    mutate(act = !!activity_id_(eventlog),
+                           aid = !!activity_instance_id_(eventlog),
+                           case = !!case_id_(eventlog),
+                           time = !!timestamp_(eventlog))
+        
+    base_log <- tempEventLog %>%
+                as.data.table() %>%
+                group_by(act, aid, case) %>%
+                summarize(start_time = min(time),
+                          end_time = max(time))
+    
+    tempEventLogAdditionalAttributes <- tempEventLog[!duplicated(
+                                        select(tempEventLog,act,aid,case))
+                                        ,]
+    
+    base_log <-  inner_join(base_log,tempEventLogAdditionalAttributes)
+    
+
     base_log  %>%
         bind_rows(GetEndPoints(baseLog = base_log)) -> base_log
 }
@@ -103,14 +114,16 @@ nodes_performance <- function(precedence, aggregationInstructions) {
 
 nodes_colomAgregate <- function(precedence, aggregationInstructions) {
     column <-  attr(aggregationInstructions, "colomnName")
+    columnName <- substring(column,1)[2]
+    x<-precedence
     temp <- precedence %>%
         group_by(act, from_id) %>%
-        summarize(aggr = aggregationInstructions(select(one_of(c(column))))) %>%
+        summarize(aggr = f_eval(~aggregationInstructions(uq(column)))) %>%
         ungroup () %>%
         mutate(temp = aggr) %>%
         na.omit() %>%
         select(temp)
-    colnames(temp)<-c(paste0(column,"_", deparse(substitute(aggregationInstructions))))
+    colnames(temp)<-c(paste0(columnName,"_", deparse(substitute(aggregationInstructions))))
     return(temp)
 }
 
@@ -236,6 +249,7 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         nodes<-GetBasicNodes(base_precedence)
         edges<-GetBasicEdges(base_precedence)
         
+        
         nodes %>%
             mutate(color_level = rescale(color_level)) %>%
             mutate(color_level = if_end(act, Inf, color_level)) -> nodes
@@ -252,8 +266,7 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
         aggregatedColumns<-as.data.table(lapply(aggregationInstructions,getNodesAggregation,nodes,base_precedence))
-        #x<-getNodesAggregation(aggregationInstruction = aggregationInstructions[[1]],
-        #                       nodes,base_precedence)
+        
         nodes_df<-cbind(nodes_df,aggregatedColumns)
         
         min_level <- min(nodes_df$color_level)

@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+author: "Willem Feijen"
+date: "16 februari 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(bupaR)
+library(edeaR)
+library(processmonitR)
+library(plotluck)
+library(DiagrammeR)
+library(data.table)
+#library(DiagrammeRsvg)
+
+csvLog<-read.table("../3.0 RefundProcessVoorNarekenen.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
+csvLog$status = "complete"
+csvLog$activity_instance = 1:nrow(csvLog)
+csvLog$startmoment<-as.POSIXct(strptime(csvLog$startmoment, "%d-%m-%Y  %H:%M"))
+csvLog$eindmoment<-as.POSIXct(strptime(csvLog$eindmoment, "%d-%m-%Y  %H:%M"))
+
+
+lengteLogIngelezen<-nrow(csvLog)
+nrMissendeCaseIds<-sum(is.na(csvLog$CaseId))
+nrMissendeActiviteitNamen<-sum(is.na(csvLog$Activiteit))
+kolomNamen<-colnames(csvLog)
+csvLog$activity_instance = 1:nrow(csvLog)
+csvLogStart<-data.table(csvLog)
+csvLogStart$timeStamp<-csvLogStart$startmoment
+csvLogStart$status<-"start"
+csvLogEind<-csvLog
+csvLogEind$timeStamp<-csvLogEind$eindmoment
+csvLogEind$status<-"eind"
+csvLog<-rbind(csvLogStart,csvLogEind)
+rm(csvLogStart,csvLogEind)
+
+
+csvLog<-na.omit(csvLog,cols=c("OrderNr","Status","timeStamp"))
+```
+We houden: `r nrow(csvLog)` regels van de `r lengteLogVoorVerwijderen` regels uit de oorspronkelijke log over, ofwel `r round(nrow(csvLog)*100/lengteLogVoorVerwijderen,digits = 2)`%.
+
+#Gevonden kolomkoppen:
+```{r echo=FALSE, warning=T, error=T, message=T}
+colnames(csvLog)
+```
+
+#Omzetten naar een processmining Log 
+```{r echo=FALSE, warning=FALSE}
+if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
+eventLog.Base<-eventlog(csvLog,
+        case_id = "OrderNr",
+        activity_id = "Status",
+        activity_instance_id = "activity_instance",
+        lifecycle_id = "status",
+        timestamp = "timeStamp",
+        resource_id = "Employee"
+    )
+
+```
+
+
+
+```{r}
+#debugonce(enrichedProcessMap)
+#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
+agregationInst = list(columnAggregate( FUN = max, colomnName = ~RandomWaarde1))
+map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = aggregationInst )
+map%>%render_graph()
+map.nodes<-map$nodes_df
+map.edges<-map$edges_df
+```
+
