@@ -66,8 +66,6 @@ eventLog.Base<-eventlog(csvLog,
 
 
 ```{r}
-#debugonce(enrichedProcessMap)
-#map<-process_map(gefilteredeEventLog, frequency("relative"),render = F )
 agregationInst = list(columnAggregate( FUN = max, colomnName = ~RandomWaarde1))
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = aggregationInst )
 map%>%render_graph()
