@@ -59,8 +59,6 @@ GetEndPoints<-function(baseLog){
         mutate(end_time = recode(act, "Start" = start_time, .default = end_time))
 }
 
-
-
 GetBasicNodes <- function(precedence) {
     precedence %>%
         group_by(act, from_id) %>%
@@ -78,11 +76,20 @@ GetBasicNodes <- function(precedence) {
     nodes
 }
 
+GetBasicEdges <- function(precedence) {
+    temp <- precedence %>%
+        ungroup() %>%
+        group_by(act, from_id, next_act, to_id) %>%
+        summarize(n = as.double(n())) %>%
+        na.omit() %>%
+        group_by(act, from_id) %>%
+        mutate(label = 0) %>%
+        ungroup() %>%
+        mutate(penwidth = rescale(label, to = c(1,5)))
+}
 
 edges_performance <- function(precedence, aggregationInstructions) {
-    
     flow_time <- attr(aggregationInstructions, "flow_time")
-    
     temp <- precedence %>%
         ungroup() %>%
         mutate(time = case_when(flow_time == "inter_start_time" ~ as.double(next_start_time - start_time, units = attr(aggregationInstructions, "units")),
@@ -112,10 +119,36 @@ nodes_performance <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
+edges_colomAgregate <- function(precedence, aggregationInstructions) {
+    column <-  attr(aggregationInstructions, "colomnName")
+    columnName <- substring(column,1)[2]
+    columnNamex <- paste0("^",columnName,".x$")
+    columnNamey <- paste0("^",columnName,".y$")
+    
+    columnValues <- precedence %>%
+        select(act, aid, columnName) 
+    
+    p <- precedence %>%
+        inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
+    names(p) <- sub(columnNamex, "aggrx", names(p))
+    names(p) <- sub(columnNamey, "aggry", names(p))
+    
+    temp <- p %>%
+        ungroup() %>%
+        group_by(act, from_id, next_act, to_id) %>%
+        summarize(aggr = f_eval(~aggregationInstructions(aggrx))) %>%
+        ungroup() %>%
+        mutate(temp = aggr) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    return(temp)
+}
+
 nodes_colomAgregate <- function(precedence, aggregationInstructions) {
     column <-  attr(aggregationInstructions, "colomnName")
     columnName <- substring(column,1)[2]
-    x<-precedence
+    
     temp <- precedence %>%
         group_by(act, from_id) %>%
         summarize(aggr = f_eval(~aggregationInstructions(uq(column)))) %>%
@@ -125,18 +158,6 @@ nodes_colomAgregate <- function(precedence, aggregationInstructions) {
         select(temp)
     colnames(temp)<-c(paste0(columnName,"_", deparse(substitute(aggregationInstructions))))
     return(temp)
-}
-
-GetBasicEdges <- function(precedence) {
-    temp <- precedence %>%
-        ungroup() %>%
-        group_by(act, from_id, next_act, to_id) %>%
-        summarize(n = as.double(n())) %>%
-        na.omit() %>%
-        group_by(act, from_id) %>%
-        mutate(label = 0) %>%
-        ungroup() %>%
-        mutate(penwidth = rescale(label, to = c(1,5)))
 }
 
 edges_frequency <- function(precedence, aggregationInstructions) {
@@ -182,12 +203,15 @@ GetBasePrecedence<-function(base_log,eventlog){
     
 suppressWarnings(base_log %>%
                      ungroup() %>%
-                     mutate(act = ordered(act, levels = c("Start", as.character(activity_labels(eventlog)), "End"))) %>%
+                     mutate(act = ordered(act
+                                            , levels = c("Start", as.character(activity_labels(eventlog))
+                                            , "End"))) %>%
                      group_by(case) %>%
                      arrange(start_time, act) %>%
                      mutate(next_act = lead(act),
                             next_start_time = lead(start_time),
-                            next_end_time = lead(end_time)) %>%
+                            next_end_time = lead(end_time),
+                            next_aid = lead(aid)) %>%
                      full_join(base_nodes, by = c("act" = "act")) %>%
                      rename(from_id = node_id) %>%
                      full_join(base_nodes, by = c("next_act" = "act")) %>%
@@ -209,10 +233,12 @@ getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
 getEdgesAggregation <- function(aggregationInstruction,base_precedence)
 {
     perspective <- attr(aggregationInstruction, "perspective")
-    if(perspective == "frequency") {
+    if(perspective == "frequency") 
         edges_frequency(base_precedence, aggregationInstruction)
-    } else if(perspective == "performance")
+    else if(perspective == "performance")
         edges_performance(base_precedence, aggregationInstruction)
+    else if(perspective == "colomAgregate")
+        edges_colomAgregate(base_precedence, aggregationInstruction)
 }
 
 enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(frequency("absolute"))) {

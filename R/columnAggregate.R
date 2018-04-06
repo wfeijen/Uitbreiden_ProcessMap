@@ -10,8 +10,9 @@
 columnAggregate <- function(FUN = mean, colomnName = NULL) {
     if (is.null(colomnName)) 
         stop("No column name specified")
-    else
+    else{
         attr(FUN, "colomnName") <- colomnName
-	attr(FUN, "perspective") <- "colomAgregate"
+        attr(FUN, "perspective") <- "colomAgregate"
+    }
 	return(FUN)
 }
