@@ -124,24 +124,35 @@ edges_colomAgregate <- function(precedence, aggregationInstructions) {
     columnName <- substring(column,1)[2]
     columnNamex <- paste0("^",columnName,".x$")
     columnNamey <- paste0("^",columnName,".y$")
+    colOperation <- attr(aggregationInstructions, "colOperation")
     
     columnValues <- precedence %>%
         select(act, aid, columnName) 
     
     p <- precedence %>%
         inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
-    names(p) <- sub(columnNamex, "aggrx", names(p))
-    names(p) <- sub(columnNamey, "aggry", names(p))
+    names(p) <- sub(columnNamex, "aggrFirst", names(p))
+    names(p) <- sub(columnNamey, "aggrSecond", names(p))
+    p$calcColumn <- case_when(
+        colOperation == "mean" ~  mean(c(p$aggrFirst,p$aggrSecond)),
+        #colOperation == "min" ~  min(c(p$aggrFirst,p$aggrSecond)),
+        #colOperation == "max" ~  max(c(p$aggrFirst,p$aggrSecond)),
+        #colOperation == "minus" ~  p$aggrFirst - p$aggrSecond,
+        #colOperation == "plus" ~ p$aggrFirst + p$aggrSecond,
+        #colOperation == "from" ~  p$aggrFirst,
+        #colOperation == "to" ~  p$aggrSecond,
+        TRUE ~  mean(c(p$aggrFirst,p$aggrSecond))
+    )
     
     temp <- p %>%
         ungroup() %>%
         group_by(act, from_id, next_act, to_id) %>%
-        summarize(aggr = f_eval(~aggregationInstructions(aggrx))) %>%
+        summarize(aggr = f_eval(~aggregationInstructions(calcColumn))) %>%
         ungroup() %>%
         mutate(temp = aggr) %>%
         na.omit() %>%
         select(temp)
-    colnames(temp)<-c(attr(aggregationInstructions, "colomnName"))
+    colnames(temp)<-c(columnName)
     return(temp)
 }
 
