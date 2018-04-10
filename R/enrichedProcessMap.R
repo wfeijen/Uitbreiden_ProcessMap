@@ -124,7 +124,7 @@ edges_colomAgregate <- function(precedence, aggregationInstructions) {
     columnName <- substring(column,1)[2]
     columnNamex <- paste0("^",columnName,".x$")
     columnNamey <- paste0("^",columnName,".y$")
-    colOperation <- attr(aggregationInstructions, "colOperation")
+    edgeOperation <- attr(aggregationInstructions, "edgeOperation")
     
     columnValues <- precedence %>%
         select(act, aid, columnName) 
@@ -133,15 +133,16 @@ edges_colomAgregate <- function(precedence, aggregationInstructions) {
         inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
     names(p) <- sub(columnNamex, "aggrFirst", names(p))
     names(p) <- sub(columnNamey, "aggrSecond", names(p))
-    p$calcColumn <- case_when(
-        colOperation == "mean" ~  mean(c(p$aggrFirst,p$aggrSecond)),
-        #colOperation == "min" ~  min(c(p$aggrFirst,p$aggrSecond)),
-        #colOperation == "max" ~  max(c(p$aggrFirst,p$aggrSecond)),
-        #colOperation == "minus" ~  p$aggrFirst - p$aggrSecond,
-        #colOperation == "plus" ~ p$aggrFirst + p$aggrSecond,
-        #colOperation == "from" ~  p$aggrFirst,
-        #colOperation == "to" ~  p$aggrSecond,
-        TRUE ~  mean(c(p$aggrFirst,p$aggrSecond))
+    p$calcColumn <- p$aggrSecond
+    x <- case_when(
+        edgeOperation == "mean" ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond))),
+        edgeOperation == "min" ~  as.double(do.call(pmin, data.frame(p$aggrFirst,p$aggrSecond))),
+        edgeOperation == "max" ~  as.double(do.call(pmax, data.frame(p$aggrFirst,p$aggrSecond))),
+        edgeOperation == "minus" ~  as.double(p$aggrFirst - p$aggrSecond),
+        edgeOperation == "plus" ~ as.double(p$aggrFirst + p$aggrSecond),
+        edgeOperation == "from" ~  as.double(p$aggrFirst),
+        edgeOperation == "to" ~  as.double(p$aggrSecond),
+        TRUE ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond)))
     )
     
     temp <- p %>%
