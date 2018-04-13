@@ -64,7 +64,7 @@ eventLog.Base<-eventlog(csvLog,
 
 
 ```{r}
-agregationInst = list(columnAggregate( FUN = mean, colomnName = ~RandomWaarde1, edgeOperation = "to"))
+agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx", edgeOperation = "to"))
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
 map%>%render_graph()
 map.nodes<-map$nodes_df
