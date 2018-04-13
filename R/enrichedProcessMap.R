@@ -321,7 +321,7 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         edges_df <- cbind(edges_df, aggregatedEdges)
         
         create_graph(nodes_df, edges_df) %>%
-            set_global_graph_attrs(attr = "rankdir", value = "LR",attr_type = "graph") %>%
+            add_global_graph_attrs(attr = "rankdir", value = "LR",attr_type = "graph") %>%
             colorize_node_attrs(node_attr_from = "color_level",
                                 node_attr_to = "fillcolor",
                                 #palette = ifelse(perspective == "performance", "Reds", "PuBu"),

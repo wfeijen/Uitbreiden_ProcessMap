@@ -26,8 +26,6 @@ csvLog$eindmoment<-as.POSIXct(strptime(csvLog$eindmoment, "%d-%m-%Y  %H:%M"))
 
 
 lengteLogIngelezen<-nrow(csvLog)
-nrMissendeCaseIds<-sum(is.na(csvLog$CaseId))
-nrMissendeActiviteitNamen<-sum(is.na(csvLog$Activiteit))
 kolomNamen<-colnames(csvLog)
 csvLog$activity_instance = 1:nrow(csvLog)
 csvLogStart<-data.table(csvLog)
