@@ -67,7 +67,39 @@ eventLog.Base<-eventlog(csvLog,
 agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx", edgeOperation = "to"))
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
 map%>%render_graph()
-map.nodes<-map$nodes_df
-map.edges<-map$edges_df
+map.nodes <- map %>% get_node_df()
+map.edges <- map %>% get_edge_df()
+```
+```{r}
+fill_activities <- function( diagrammerProcessMap,
+                             captionColumns,
+                             colorColumn){
+    diagrammerProcessMap$nodes_df %>%
+          rescale_node_attrs(
+            node_attr_from = xxx,
+            to_lower_bound = 0,
+            to_upper_bound = 1) 
+}
+
+map %>% get_node_df()
+
+gevuldeMap <- map %>%
+          rescale_node_attrs(
+            node_attr_from = xxx,
+    to_lower_bound = "gray80",
+    to_upper_bound = "gray20",
+            node_attr_to = fillcolor )  %>%
+  rescale_node_attrs(
+    node_attr_from = xxx,
+    to_lower_bound = "gray5",
+    to_upper_bound = "gray95",
+    node_attr_to = fontcolor) %>%
+  rescale_node_attrs(
+    node_attr_from = xxx,
+    to_lower_bound = "chartreuse4",
+    to_upper_bound = "brown4",
+    node_attr_to = color)
+gevuldeMap %>% render_graph()
+
 ```
 

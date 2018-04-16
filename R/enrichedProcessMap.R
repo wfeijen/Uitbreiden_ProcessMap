@@ -65,12 +65,9 @@ GetBasicNodes <- function(precedence) {
         summarize(n = as.double(n())) %>%
         ungroup() %>%
         mutate(label = 0) %>%
-        mutate(color_level = label,
-               shape = if_end(act,"circle","rectangle"),
-               fontcolor = if_end(act, if_start(act, "chartreuse4","brown4"),  "black"),
-               color = if_end(act, if_start(act, "chartreuse4","brown4"),"grey"),
+        mutate(shape = if_start_or_end(act,"circle","rectangle"),
                tooltip = act,
-               label = if_end(act, act, tooltip)) %>%
+               activity_name = if_start_or_end(act, act, tooltip)) %>%
         na.omit()
 }
 
@@ -194,7 +191,7 @@ nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
     return(temp)
 }
 
-if_end <- function(node, true, false) {
+if_start_or_end <- function(node, true, false) {
     ifelse(node %in% c("Start","End"), true, false)
 }
 if_start <- function(node, true, false) {
@@ -255,12 +252,9 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
     
 
         create_node_df(n = nrow(nodes),
-                       label = nodes$label,
+                       label = nodes$activity_name,
                        shape = nodes$shape,
-                       color_level = nodes$color_level,
                        style = "rounded,filled",
-                       fontcolor = nodes$fontcolor,
-                       color = nodes$color,
                        tooltip = nodes$tooltip,
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
