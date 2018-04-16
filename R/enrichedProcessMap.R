@@ -64,7 +64,7 @@ GetBasicNodes <- function(precedence) {
         group_by(act, from_id) %>%
         summarize(n = as.double(n())) %>%
         ungroup() %>%
-        mutate(label = 0) %>%
+        mutate(activity_name = 0) %>%
         mutate(shape = if_start_or_end(act,"circle","rectangle"),
                tooltip = act,
                activity_name = if_start_or_end(act, act, tooltip)) %>%
@@ -78,9 +78,9 @@ GetBasicEdges <- function(precedence) {
         summarize(n = as.double(n())) %>%
         na.omit() %>%
         group_by(act, from_id) %>%
-        mutate(label = 0) %>%
+        mutate(activity_name = 0) %>%
         ungroup() %>%
-        mutate(penwidth = rescale(label, to = c(1,5)))
+        mutate(penwidth = rescale(activity_name, to = c(1,5)))
 }
 
 edges_performance <- function(precedence, aggregationInstructions) {
@@ -259,6 +259,7 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
         aggregatedColumns<-as.data.table(lapply(aggregationInstructions,getNodesAggregation,nodes,base_precedence))
+        aggregatedColumns$activity_name <- nodes$activity_name
         
         nodes_df<-cbind(nodes_df,aggregatedColumns)
         
@@ -267,7 +268,7 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         
         create_edge_df(from = edges$from_id,
                        to = edges$to_id,
-                       label = edges$label,
+                       activity_name = edges$activity_name,
                        penwidth = edges$penwidth,
                        fontname = "Arial") -> edges_df
         
