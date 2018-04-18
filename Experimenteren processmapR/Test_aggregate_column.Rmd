@@ -73,37 +73,68 @@ map.edges <- map %>% get_edge_df()
 ```{r}
 fill_activities <- function( diagrammerProcessMap,
                              captionColumns,
-                             colorColumn){
-    diagrammerProcessMap$nodes_df %>%
-          rescale_node_attrs(
-            node_attr_from = xxx2,
-            to_lower_bound = 0,
-            to_upper_bound = 100) 
+                             colorCaption,
+                             colorColumn,
+                             colorUpperbound,
+                             colorLowerbound){
+    diagrammerProcessMap %>%
+  rescale_node_attrs(
+    node_attr_from = !!colorColumn,
+    to_lower_bound = colorLowerbound,
+    to_upper_bound = colorUpperbound,
+    node_attr_to = fillcolor ) %>%
+  rescale_node_attrs(
+    node_attr_from = !!colorColumn,
+    to_lower_bound = colorCaption,
+    to_upper_bound = colorCaption,
+    node_attr_to = fontcolor) %>%
+  rescale_node_attrs(
+    node_attr_from = !!colorColumn,
+    to_lower_bound = colorCaption,
+    to_upper_bound = colorCaption,
+    node_attr_to = color) %>%
+    mutate_node_attrs(label = activity_name)
 }
 
 map %>% get_node_df()
 
-gevuldeMap <- map %>%
-          rescale_node_attrs(
-            node_attr_from = xxx2,
-    to_lower_bound = "gray80",
-    to_upper_bound = "gray20",
-            node_attr_to = fillcolor )  %>%
-  rescale_node_attrs(
-    node_attr_from = xxx2,
-    to_lower_bound = "gray5",
-    to_upper_bound = "gray95",
-    node_attr_to = fontcolor) %>%
-  rescale_node_attrs(
-    node_attr_from = xxx2,
-    to_lower_bound = "chartreuse4",
-    to_upper_bound = "brown4",
-    node_attr_to = color) %>%
-    mutate_node_attrs(label = activity_name)
+gevuldeMap <- fill_activities(map, 
+                              colorColumn = "xxx2",
+                              colorCaption = "red4",
+                              colorUpperbound = "gray50",
+                              colorLowerbound = "gray100")
 
 gevuldeMap %>% render_graph()
 
+
 ```
+``
+```{r}
+library(RColorBrewer)
+ATblue <- rgb(26/255, 115/255, 186/255, 1)
+ ATyellow <- rgb(255/255, 219/255, 67/255, 1)
+ ATorange <- rgb(181/255, 75/255, 5/255, 1)
+
+
+ pasd <- brewer.pal(8,"Set3")
+ 
+gevuldeMap <- map %>%
+          colorize_node_attrs(
+    node_attr_from = xxx2,
+    node_attr_to = fillcolor ,
+    #cut_points = c(0,  10, 100, 1000),
+    palette = "Greens")# werkt: "Greens"
+
+
+
+map %>% get_node_df()
+
+gevuldeMap %>% render_graph()
+
+
+
+```
+
 ```{r}
 
 ```
