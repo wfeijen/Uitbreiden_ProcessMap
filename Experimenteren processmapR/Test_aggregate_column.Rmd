@@ -64,73 +64,119 @@ eventLog.Base<-eventlog(csvLog,
 
 
 ```{r}
-agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = mean, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "from"))
+agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = max, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "from"))
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
 map%>%render_graph()
 map.nodes <- map %>% get_node_df()
 map.edges <- map %>% get_edge_df()
 ```
 ```{r}
-fill_activities <- function( diagrammerProcessMap,
-                             captionColumns,
-                             colorCaption,
-                             colorColumn,
-                             colorUpperbound,
-                             colorLowerbound){
+color_activities <- function( diagrammerProcessMap,
+                             column,
+                             colorCaption  = "black",
+                             colorUpperbound = "gray100",
+                             colorLowerbound= "gray50"){
     diagrammerProcessMap %>%
-  rescale_node_attrs(
-    node_attr_from = !!colorColumn,
-    to_lower_bound = colorLowerbound,
-    to_upper_bound = colorUpperbound,
-    node_attr_to = fillcolor ) %>%
-  rescale_node_attrs(
-    node_attr_from = !!colorColumn,
-    to_lower_bound = colorCaption,
-    to_upper_bound = colorCaption,
-    node_attr_to = fontcolor) %>%
-  rescale_node_attrs(
-    node_attr_from = !!colorColumn,
-    to_lower_bound = colorCaption,
-    to_upper_bound = colorCaption,
-    node_attr_to = color) %>%
-    mutate_node_attrs(label = activity_name)
+      rescale_node_attrs(
+        node_attr_from = !!column,
+        to_lower_bound = colorLowerbound,
+        to_upper_bound = colorUpperbound,
+        node_attr_to = fillcolor ) %>%
+      rescale_node_attrs(
+        node_attr_from = !!column,
+        to_lower_bound = colorCaption,
+        to_upper_bound = colorCaption,
+        node_attr_to = fontcolor) %>%
+      rescale_node_attrs(
+        node_attr_from = !!column,
+        to_lower_bound = colorCaption,
+        to_upper_bound = colorCaption,
+        node_attr_to = color) 
+}
+
+label_activities <- function( diagrammerProcessMap,
+                             columns =c("activity_name")
+                             ){
+    if (length(columns) > 1)
+        diagrammerProcessMap$nodes_df$tempVarGjdasflx <-  apply( get_node_df(diagrammerProcessMap)[ , columns ] , 1 , paste , collapse = "\n\r" )
+    else if (length(columns) == 1)
+        diagrammerProcessMap$nodes_df$tempVarGjdasflx <-  get_node_df(diagrammerProcessMap)[, columns[1]]
+    else #no columns
+        diagrammerProcessMap$nodes_df$tempVarGjdasflx <- ""
+
+    diagrammerProcessMap %>%
+        mutate_node_attrs(label = tempVarGjdasflx)
 }
 
 map %>% get_node_df()
 
-gevuldeMap <- fill_activities(map, 
-                              colorColumn = "xxx2",
+gevuldeMap <- map %>%
+                color_activities( column = "xxx2",
+                                  colorCaption = "black",
+                                  colorUpperbound = "red4",
+                                  colorLowerbound = "green1") %>%
+                label_activities(columns =c("activity_name","xxx1","xxx2"))
+
+gevuldeMap %>% render_graph()
+
+gevuldeMap <- map %>%
+                color_activities( column = "xxx2",
+                                  colorCaption = "black",
+                                  colorUpperbound = "red4",
+                                  colorLowerbound = "green1") %>%
+                label_activities(columns =c("activity_name"))
+
+gevuldeMap %>% render_graph()
+
+gevuldeMap <- map %>%
+                color_activities( column = "xxx2",
+                                  colorCaption = "black",
+                                  colorUpperbound = "red4",
+                                  colorLowerbound = "green1") %>%
+                label_activities(columns =c())
+
+gevuldeMap %>% render_graph()
+
+```
+```{r}
+color_edges <- function( diagrammerProcessMap,
+                             captionColumns = "",
+                             colorCaption,
+                             column,
+                             colorUpperbound,
+                             colorLowerbound){
+    diagrammerProcessMap %>%
+  rescale_edge_attrs(
+    edge_attr_from = !!column,
+    to_lower_bound = colorLowerbound,
+    to_upper_bound = colorUpperbound,
+    edge_attr_to = fillcolor ) %>%
+  rescale_edge_attrs(
+    edge_attr_from = !!column,
+    to_lower_bound = colorCaption,
+    to_upper_bound = colorCaption,
+    edge_attr_to = fontcolor) %>%
+  rescale_edge_attrs(
+    edge_attr_from = !!column,
+    to_lower_bound = colorCaption,
+    to_upper_bound = colorCaption,
+    edge_attr_to = color) %>%
+  mutate_edge_attrs(label = activity_name)
+}
+
+map %>% get_node_df()
+
+gevuldeMap <- color_edges(map, 
+                              column = "xxx2",
                               colorCaption = "red4",
                               colorUpperbound = "gray50",
                               colorLowerbound = "gray100")
 
 gevuldeMap %>% render_graph()
 
-
-```
-``
-```{r}
-library(RColorBrewer)
-ATblue <- rgb(26/255, 115/255, 186/255, 1)
- ATyellow <- rgb(255/255, 219/255, 67/255, 1)
- ATorange <- rgb(181/255, 75/255, 5/255, 1)
-
-
- pasd <- brewer.pal(8,"Set3")
- 
-gevuldeMap <- map %>%
-          colorize_node_attrs(
-    node_attr_from = xxx2,
-    node_attr_to = fillcolor ,
-    #cut_points = c(0,  10, 100, 1000),
-    palette = "Greens")# werkt: "Greens"
-
-
-
-map %>% get_node_df()
-
-gevuldeMap %>% render_graph()
-
+cols <- c("id","label","style")
+x <-  apply( map.nodes[ , cols ] , 1 , paste , collapse = " " )#paste(list(map.nodes$id,map.nodes$label,map.nodes$style,map.nodes$penwidth),sep = " ")
+x
 
 
 ```
