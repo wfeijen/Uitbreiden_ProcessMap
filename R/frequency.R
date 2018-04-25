@@ -4,13 +4,13 @@
 #' @export frequency
 
 
-frequency <- function(value = c("absolute", "relative"),colomnName = NULL) {
+frequency <- function(value = c("absolute", "relative"),columnName = NULL) {
 	value <- match.arg(value)
 	attr(value, "perspective") <- "frequency"
-	if (is.null(colomnName)) { 
-	    attr(value, "colomnName") <- paste0("frequency_",value)
+	if (is.null(columnName)) { 
+	    attr(value, "columnName") <- paste0("frequency_",value)
 	} else {
-	    attr(value, "colomnName") <- colomnName
+	    attr(value, "columnName") <- columnName
 	}
 	return(value)
 }

@@ -59,13 +59,68 @@ eventLog.Base<-eventlog(csvLog,
         resource_id = "Employee"
     )
 ```
-
+# Map met frequency
 ```{r}
-agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = max, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "from"))
+agregationInst = list( frequency(value = "absolute", columnName = "xxx") )
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
-map%>%render_graph()
+map %>%
+    processmapR::color_activities( column = "xxx",
+                      colorCaption = "black",
+                      colorUpperbound = "deeppink",
+                      colorLowerbound = "green1") %>%
+    label_activities(columns =c("activity_name","xxx")) %>%
+          color_transitions(column = "xxx",
+          colorCaption = "black",
+          colorUpperbound = "deeppink",
+          colorLowerbound = "darkgreen") %>%
+    label_transitions(columns = c("xxx")) %>% 
+    render_graph()
+
 map.nodes <- map %>% get_node_df()
 map.edges <- map %>% get_edge_df()
+```
+# Map met performance
+```{r}
+agregationInst = list( performance(FUN = mean, columnName = "xxx"))
+map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
+map %>%
+    processmapR::color_activities( column = "xxx",
+                      colorCaption = "black",
+                      colorUpperbound = "deeppink",
+                      colorLowerbound = "green1") %>%
+    label_activities(columns =c("activity_name","xxx")) %>%
+          color_transitions(column = "xxx",
+          colorCaption = "black",
+          colorUpperbound = "deeppink",
+          colorLowerbound = "darkgreen") %>%
+    label_transitions(columns = c("xxx")) %>% 
+    render_graph()
+
+map.nodes <- map %>% get_node_df()
+map.edges <- map %>% get_edge_df()
+```
+# Map met aggregate
+```{r}
+
+agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = mean, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "from")
+                      )
+map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
+map.nodes <- map %>% get_node_df()
+map.edges <- map %>% get_edge_df()
+map %>%
+    processmapR::color_activities( column = "xxx2",
+                      colorCaption = "black",
+                      colorUpperbound = "deeppink",
+                      colorLowerbound = "green1") %>%
+    label_activities(columns =c("activity_name","xxx2")) %>%
+          color_transitions(column = "xxx2",
+          colorCaption = "black",
+          colorUpperbound = "deeppink",
+          colorLowerbound = "darkgreen") %>%
+    label_transitions(columns = c("xxx2")) %>% 
+    render_graph()
+
+
 ```
 ```{r}
 map %>% get_node_df()

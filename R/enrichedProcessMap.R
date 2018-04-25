@@ -101,6 +101,7 @@ edges_performance <- function(precedence, aggregationInstructions) {
 }
 
 nodes_performance <- function(precedence, aggregationInstructions) {
+    columnName <-  attr(aggregationInstructions, "columnName")
     temp <- precedence %>%
         mutate(duration = as.double(end_time-start_time
                                     , units = attr(aggregationInstructions, "units"))) %>%
@@ -110,7 +111,7 @@ nodes_performance <- function(precedence, aggregationInstructions) {
         mutate(temp = aggr) %>%
         na.omit() %>%
         select(temp)
-    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
+    colnames(temp)<-c(columnName)
     return(temp)
 }
 
