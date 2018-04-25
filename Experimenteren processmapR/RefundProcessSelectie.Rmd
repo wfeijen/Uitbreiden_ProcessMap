@@ -18,7 +18,7 @@ library(DiagrammeR)
 library(data.table)
 #library(DiagrammeRsvg)
 
-csvLog<-read.table("../RefundProcessVoorNarekenen.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
+csvLog<-read.table("../RefundProcess.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
 csvLog$status = "complete"
 csvLog$activity_instance = 1:nrow(csvLog)
 csvLog$startmoment<-as.POSIXct(strptime(csvLog$startmoment, "%d-%m-%Y  %H:%M"))
