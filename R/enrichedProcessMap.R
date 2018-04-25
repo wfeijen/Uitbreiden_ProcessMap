@@ -275,34 +275,9 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         aggregatedEdges<-as.data.table(lapply(aggregationInstructions,getEdgesAggregation,base_precedence))
         edges_df <- cbind(edges_df, aggregatedEdges)
         
-        create_graph(nodes_df, edges_df) %>%
-            add_global_graph_attrs(attr = "rankdir", value = "LR",attr_type = "graph") -> graph
-            graph %>% return()
-}
-
-color_activities <- function( diagrammerProcessMap,
-                             captionColumns,
-                             colorCaption,
-                             colorColumn,
-                             colorUpperbound,
-                             colorLowerbound){
-    diagrammerProcessMap %>%
-        rescale_node_attrs(
-            node_attr_from = !!colorColumn,
-            to_lower_bound = colorLowerbound,
-            to_upper_bound = colorUpperbound,
-            node_attr_to = fillcolor ) %>%
-        rescale_node_attrs(
-            node_attr_from = !!colorColumn,
-            to_lower_bound = colorCaption,
-            to_upper_bound = colorCaption,
-            node_attr_to = fontcolor) %>%
-        rescale_node_attrs(
-            node_attr_from = !!colorColumn,
-            to_lower_bound = colorCaption,
-            to_upper_bound = colorCaption,
-            node_attr_to = color) %>%
-        mutate_node_attrs(label = activity_name)
+        create_graph(nodes_df, edges_df)  %>%
+            add_global_graph_attrs(attr = "rankdir", value = "TB",attr_type = "graph") %>%
+            add_global_graph_attrs(attr = "layout", value = "dot", attr_type = "graph") 
 }
 
     
