@@ -17,36 +17,30 @@ library(plotluck)
 library(DiagrammeR)
 library(data.table)
 #library(DiagrammeRsvg)
+library(anytime)
 
-csvLog<-read.table("../RefundProcess.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
-csvLog$status = "complete"
-csvLog$activity_instance = 1:nrow(csvLog)
-csvLog$startmoment<-as.POSIXct(strptime(csvLog$startmoment, "%d-%m-%Y  %H:%M"))
-csvLog$eindmoment<-as.POSIXct(strptime(csvLog$eindmoment, "%d-%m-%Y  %H:%M"))
-
-
-lengteLogIngelezen<-nrow(csvLog)
-kolomNamen<-colnames(csvLog)
-csvLog$activity_instance = 1:nrow(csvLog)
-csvLogStart<-data.table(csvLog)
-csvLogStart$timeStamp<-csvLogStart$startmoment
-csvLogStart$status<-"start"
-csvLogEind<-csvLog
-csvLogEind$timeStamp<-csvLogEind$eindmoment
-csvLogEind$status<-"eind"
-csvLog<-rbind(csvLogStart,csvLogEind)
-rm(csvLogStart,csvLogEind)
-
-
-csvLog<-na.omit(csvLog,cols=c("OrderNr","Status","timeStamp"))
+csvLog<-read.table("../largeFile.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend","-", "NA"))
+csvLog$timeStamp <- anydate(csvLog$timeStamp)#as.POSIXct(strptime(csvLog$timeStamp, "%d-%m-%Y"))
 ```
-We houden: `r nrow(csvLog)` regels van de `r lengteLogVoorVerwijderen` regels uit de oorspronkelijke log over, ofwel `r round(nrow(csvLog)*100/lengteLogVoorVerwijderen,digits = 2)`%.
+
 
 #Gevonden kolomkoppen:
 ```{r echo=FALSE, warning=T, error=T, message=T}
 colnames(csvLog)
 ```
 
+#Omzetten naar een processmining Log 
+```{r echo=FALSE, warning=FALSE}
+if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
+eventLog.Base<-eventlog(csvLog,
+        case_id = "OrderNr",
+        activity_id = "Status",
+        activity_instance_id = "activity_instance",
+        lifecycle_id = "status",
+        timestamp = "timeStamp",
+        resource_id = "Employee"
+    )
+```
 #Omzetten naar een processmining Log 
 ```{r echo=FALSE, warning=FALSE}
 if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
@@ -102,8 +96,11 @@ map.edges <- map %>% get_edge_df()
 # Map met aggregate
 ```{r}
 
-agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = mean, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "from")
+agregationInst = list(columnAggregate( FUN = mean, columnNameIn = "aantal_kamers", columnNameOut = "xxx1", edgeOperation = "to"),columnAggregate( FUN = mean, columnNameIn = "voortuin", columnNameOut = "xxx2", edgeOperation = "from")
                       )
+
+eventLog.Base$aantal_kamers <- as.numeric(as.character(eventLog.Base$aantal_kamers))
+eventLog.Base$voortuin <- as.numeric(as.character(eventLog.Base$voortuin))
 map<-enrichedProcessMap(eventLog.Base, aggregationInstructions = agregationInst )
 map.nodes <- map %>% get_node_df()
 map.edges <- map %>% get_edge_df()

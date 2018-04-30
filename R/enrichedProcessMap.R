@@ -3,7 +3,7 @@
 #'
 #' @description A function for creating a process map of an event log.
 #' @param eventlog The event log object for which to create a process map
-#' @param type Defines the type of metric shown by the with of the edges, which can be created with the functions frequency and performance. The first type focusses on the frequency aspect of a process, while the second one focussed on processing time.
+#' @param aggregationInstructions Is the list of aggregation instructions that will be fired when building the process map.
 #'
 #' @examples
 #' \dontrun{
@@ -13,15 +13,6 @@
 #' }
 #' @export enrichedProcessMap
 
-
-# We aim at maximum flexibility by:
-# 1 visualizing multiple metrics by:
-#	a- edge with
-#	b- edge color black to red
-#   c- edge color black to blue
-# 2 simplifieng the graph by leaving edges out based on metric. This can be done in two ways:
-#	1- as a percentage of all edges (I.E. 0.5 shows half of the edges)
-#	2- as an absolute number > 1 (I.E. 10 shows at most 10 edges)
 
 CreateBaseLog<-function(eventlog){
     tempEventLog <- eventlog %>%
@@ -78,9 +69,9 @@ GetBasicEdges <- function(precedence) {
         summarize(n = as.double(n())) %>%
         na.omit() %>%
         group_by(act, from_id) %>%
-        mutate(activity_name = 0) %>%
+        mutate(label = "") %>%
         ungroup() %>%
-        mutate(penwidth = rescale(activity_name, to = c(1,5)))
+        mutate(penwidth = 1,5)
 }
 
 edges_performance <- function(precedence, aggregationInstructions) {
@@ -100,7 +91,7 @@ edges_performance <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
-nodes_performance <- function(precedence, aggregationInstructions) {
+nodes_performance <- function(nodes, precedence, aggregationInstructions) {
     columnName <-  attr(aggregationInstructions, "columnName")
     temp <- precedence %>%
         mutate(duration = as.double(end_time-start_time
@@ -108,10 +99,13 @@ nodes_performance <- function(precedence, aggregationInstructions) {
         group_by(act, from_id) %>%
         summarize(aggr = aggregationInstructions(duration)) %>%
         ungroup () %>%
-        mutate(temp = aggr) %>%
+        mutate(tempCol = aggr) %>%
         na.omit() %>%
-        select(temp)
-    colnames(temp)<-c(columnName)
+        select(act,tempCol)
+    #@nog niet mooi
+    temp <- left_join(nodes, temp, by = c("activity_name" = "act")) 
+    temp <- select(temp, tempCol)
+    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
     return(temp)
 }
 
@@ -151,15 +145,25 @@ edges_columnAgregate <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
-nodes_columnAgregate <- function(precedence, aggregationInstructions) {
+nodes_columnAgregate <- function(nodes, precedence, aggregationInstructions) {
     names(precedence) <- sub(attr(aggregationInstructions, "columnNameIn"), "aggrCol", names(precedence))
+    if (!is.numeric( precedence$aggrCol )){
+        stop(paste0("The column: ",attr(aggregationInstructions, "columnNameIn"), " is not numerical."))
+    }
+    if (sum( !is.na( precedence$aggrCol ) )==0){
+        stop(paste0("There seems to be no numerical data in column: ",attr(aggregationInstructions, "columnNameIn")))
+    }
+    precedence <- precedence[complete.cases(precedence[ ,"aggrCol"]),]
     temp <- precedence %>%
         group_by(act, from_id) %>%
         summarize(aggr = aggregationInstructions(aggrCol)) %>%
         ungroup () %>%
-        mutate(temp = aggr) %>%
+        mutate(tempCol = aggr) %>%
         na.omit() %>%
-        select(temp)
+        select(act,tempCol)
+#@nog niet mooi
+    temp <- left_join(nodes, temp, by = c("activity_name" = "act")) 
+    temp <- select(temp, tempCol)
     colnames(temp)<-c(attr(aggregationInstructions, "columnNameOut"))
     return(temp)
 }
@@ -170,24 +174,25 @@ edges_frequency <- function(precedence, aggregationInstructions) {
         group_by(act, from_id, next_act, to_id) %>%
         summarize(n = as.double(n())) %>%
         ungroup() %>%
-        mutate(temp = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
                                  aggregationInstructions == "absolute" ~ n)) %>%
         na.omit() %>%
-        select(temp)
-    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
+        select(act,tempCol)
+    colnames(temp)<-c("activity_name",attr(aggregationInstructions, "columnName"))
     return(temp)
 }
 
 nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
     temp <- precedence %>%
         group_by(act, from_id) %>%
-        inner_join(nodes) %>%
         summarize(n = as.double(n())) %>%
         ungroup() %>%
-        mutate(temp = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
                                 aggregationInstructions == "absolute" ~ n)) %>%
         na.omit() %>%
-        select(temp)
+        select(act,tempCol)
+    temp <- left_join(nodes, temp, by = c("activity_name" = "act")) 
+    temp <- select(temp, tempCol)
     colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
     return(temp)
 }
@@ -227,11 +232,11 @@ getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
 {
     perspective <- attr(aggregationInstruction, "perspective")
     if(perspective == "frequency") 
-        nodes_frequency(nodes,base_precedence, aggregationInstruction)
+        nodes_frequency(nodes, base_precedence, aggregationInstruction)
     else if(perspective == "performance") 
-        nodes_performance(base_precedence, aggregationInstruction)
+        nodes_performance(nodes, base_precedence, aggregationInstruction)
     else if(perspective == "columnAgregate") 
-        nodes_columnAgregate(base_precedence, aggregationInstruction)
+        nodes_columnAgregate(nodes, base_precedence, aggregationInstruction)
 }
 
 getEdgesAggregation <- function(aggregationInstruction,base_precedence)
@@ -260,16 +265,17 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
                        penwidth = 1.5,
                        fontname = "Arial") -> nodes_df
         aggregatedColumns<-as.data.table(lapply(aggregationInstructions,getNodesAggregation,nodes,base_precedence))
-        aggregatedColumns$activity_name <- nodes$activity_name
+        #aggregatedColumns$activity_name <- nodes$activity_name
         
-        nodes_df<-cbind(nodes_df,aggregatedColumns)
+        nodes_df <- cbind(nodes_df, aggregatedColumns)
+        nodes_df$activity_name <- nodes_df$label
         
-        min_level <- min(nodes_df$color_level)
-        max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
+        #min_level <- min(nodes_df$color_level)
+        #max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
         
         create_edge_df(from = edges$from_id,
                        to = edges$to_id,
-                       activity_name = edges$activity_name,
+                       label = edges$label,
                        penwidth = edges$penwidth,
                        fontname = "Arial") -> edges_df
         

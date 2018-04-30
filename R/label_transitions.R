@@ -22,7 +22,7 @@ label_transitions <- function( diagrammerProcessMap,
     else if (length(columns) == 1)
         diagrammerProcessMap$edges_df$tempVarGjdasflx <-  get_edge_df(diagrammerProcessMap)[, columns[1]]
     else #no columns
-        diagrammerProcessMap$edges_df$tempVarGjdasflx <- ""
+        diagrammerProcessMap$edges_df$tempVarGjdasflx <- " "
     
     diagrammerProcessMap %>%
         mutate_edge_attrs(label = tempVarGjdasflx)
