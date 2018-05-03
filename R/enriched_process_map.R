@@ -11,7 +11,7 @@
 #' data(patients)
 #' process_map(patients)
 #' }
-#' @export enrichedProcessMap
+#' @export enriched_process_map
 
 
 CreateBaseLog<-function(eventlog){
@@ -250,7 +250,7 @@ getEdgesAggregation <- function(aggregationInstruction,base_precedence)
         edges_columnAgregate(base_precedence, aggregationInstruction)
 }
 
-enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(frequency("absolute"))) {
+enriched_process_map <- function(eventlog , aggregationInstructions =  list(frequency("absolute"))) {
         base_log<-CreateBaseLog(eventlog = eventlog)
         base_precedence<- GetBasePrecedence(base_log,eventlog = eventlog)
         nodes<-GetBasicNodes(base_precedence)
@@ -270,8 +270,8 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         nodes_df <- cbind(nodes_df, aggregatedColumns)
         nodes_df$activity_name <- nodes_df$label
         
-        #min_level <- min(nodes_df$color_level)
-        #max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
+        min_level <- min(nodes_df$color_level)
+        max_level <- max(nodes_df$color_level[nodes_df$color_level < Inf])
         
         create_edge_df(from = edges$from_id,
                        to = edges$to_id,
@@ -284,7 +284,12 @@ enrichedProcessMap <- function(eventlog , aggregationInstructions =  list(freque
         
         create_graph(nodes_df, edges_df)  %>%
             add_global_graph_attrs(attr = "rankdir", value = "TB",attr_type = "graph") %>%
-            add_global_graph_attrs(attr = "layout", value = "dot", attr_type = "graph") 
+            add_global_graph_attrs(attr = "layout", value = "dot", attr_type = "graph") %>%
+            colorize_node_attrs(node_attr_from = "color_level",
+                                node_attr_to = "fillcolor",
+                                palette = "PuBu",
+                                default_color = "white",
+                                cut_points = seq(0, 100, length.out = 9))
 }
 
     

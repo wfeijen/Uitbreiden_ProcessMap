@@ -4,12 +4,12 @@
 #' @param columnNameIn The name of the column to be aggregated
 #' @param columnNameOut The name of the aggregated column
 #' @param edgeOperation The operation to calculate a single value from the from and the to column in an edge
-#' @export columnAggregate
+#' @export enriched_column_aggregate
 
 
 
 
-columnAggregate <- function(FUN = mean, columnNameIn = NULL, columnNameOut = NULL, edgeOperation = c("mean", "min", "max", "minus", "plus","from","to")) {
+enriched_column_aggregate <- function(FUN = mean, columnNameIn = NULL, columnNameOut = NULL, edgeOperation = c("mean", "min", "max", "minus", "plus","from","to")) {
     if (is.null(columnNameIn)) 
         stop("No columnNameIn specified")
     else if (is.null(columnNameOut)) 
