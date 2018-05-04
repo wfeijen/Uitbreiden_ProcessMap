@@ -15,14 +15,22 @@
 #' @export label_activities
 
 label_activities <- function( diagrammerProcessMap,
-                              columns =c("activity_name")
+                              columns =c("activity_name"),
+                              heightfactor = 3
 ){
-    if (length(columns) > 1)
+    columnsSize <- length(columns)
+    if (columnsSize > 1) {
         diagrammerProcessMap$nodes_df$tempVarGjdasflx <-  apply( get_node_df(diagrammerProcessMap)[ , columns ] , 1 , paste , collapse = "\n\r" )
-    else if (length(columns) == 1)
+        diagrammerProcessMap$nodes_df$height = columnsSize/heightfactor
+    }
+    else if (columnsSize == 1) {
         diagrammerProcessMap$nodes_df$tempVarGjdasflx <-  get_node_df(diagrammerProcessMap)[, columns[1]]
-    else #no columns
+        diagrammerProcessMap$nodes_df$height = 1/heightfactor
+    }
+    else { #no columns
         diagrammerProcessMap$nodes_df$tempVarGjdasflx <- ""
+        diagrammerProcessMap$nodes_df$height = 1/heightfactor
+    }
     
     diagrammerProcessMap %>%
         mutate_node_attrs(label = tempVarGjdasflx)

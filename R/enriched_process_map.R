@@ -91,6 +91,42 @@ edges_performance <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
+edges_columnAgregate <- function(precedence, aggregationInstructions) {
+    columnName <-  attr(aggregationInstructions, "columnNameIn")
+    columnNamex <- paste0("^",columnName,".x$")
+    columnNamey <- paste0("^",columnName,".y$")
+    edgeOperation <- attr(aggregationInstructions, "edgeOperation")
+    
+    columnValues <- precedence %>%
+        select(act, aid, columnName) 
+    
+    p <- precedence %>%
+        inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
+    names(p) <- sub(columnNamex, "aggrFirst", names(p))
+    names(p) <- sub(columnNamey, "aggrSecond", names(p))
+    p$calcColumn <- case_when(
+        edgeOperation == "mean" ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond))),
+        edgeOperation == "min" ~  as.double(do.call(pmin, data.frame(p$aggrFirst,p$aggrSecond))),
+        edgeOperation == "max" ~  as.double(do.call(pmax, data.frame(p$aggrFirst,p$aggrSecond))),
+        #edgeOperation == "minus" ~  as.double(p$aggrFirst - p$aggrSecond),
+        #edgeOperation == "plus" ~ as.double(p$aggrFirst + p$aggrSecond),
+        edgeOperation == "from" ~  as.double(p$aggrFirst),
+        edgeOperation == "to" ~  as.double(p$aggrSecond),
+        TRUE ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond)))
+    )
+    
+    temp <- p %>%
+        ungroup() %>%
+        group_by(act, from_id, next_act, to_id) %>%
+        summarize(aggr = aggregationInstructions(calcColumn)) %>%
+        ungroup() %>%
+        mutate(temp = aggr) %>%
+        na.omit() %>%
+        select(temp)
+    colnames(temp)<-c(attr(aggregationInstructions, "columnNameOut"))
+    return(temp)
+}
+
 nodes_performance <- function(nodes, precedence, aggregationInstructions) {
     columnName <-  attr(aggregationInstructions, "columnName")
     temp <- precedence %>%
@@ -109,39 +145,18 @@ nodes_performance <- function(nodes, precedence, aggregationInstructions) {
     return(temp)
 }
 
-edges_columnAgregate <- function(precedence, aggregationInstructions) {
-    columnName <-  attr(aggregationInstructions, "columnNameIn")
-    columnNamex <- paste0("^",columnName,".x$")
-    columnNamey <- paste0("^",columnName,".y$")
-    edgeOperation <- attr(aggregationInstructions, "edgeOperation")
-    
-    columnValues <- precedence %>%
-        select(act, aid, columnName) 
-    
-    p <- precedence %>%
-        inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
-    names(p) <- sub(columnNamex, "aggrFirst", names(p))
-    names(p) <- sub(columnNamey, "aggrSecond", names(p))
-    p$calcColumn <- case_when(
-        edgeOperation == "mean" ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond))),
-        edgeOperation == "min" ~  as.double(do.call(pmin, data.frame(p$aggrFirst,p$aggrSecond))),
-        edgeOperation == "max" ~  as.double(do.call(pmax, data.frame(p$aggrFirst,p$aggrSecond))),
-        edgeOperation == "minus" ~  as.double(p$aggrFirst - p$aggrSecond),
-        edgeOperation == "plus" ~ as.double(p$aggrFirst + p$aggrSecond),
-        edgeOperation == "from" ~  as.double(p$aggrFirst),
-        edgeOperation == "to" ~  as.double(p$aggrSecond),
-        TRUE ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond)))
-    )
-    
-    temp <- p %>%
+nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
+    temp <- precedence %>%
+        group_by(act, from_id) %>%
+        summarize(n = as.double(n())) %>%
         ungroup() %>%
-        group_by(act, from_id, next_act, to_id) %>%
-        summarize(aggr = aggregationInstructions(calcColumn)) %>%
-        ungroup() %>%
-        mutate(temp = aggr) %>%
+        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+                                   aggregationInstructions == "absolute" ~ n)) %>%
         na.omit() %>%
-        select(temp)
-    colnames(temp)<-c(attr(aggregationInstructions, "columnNameOut"))
+        select(act,tempCol)
+    temp <- left_join(nodes, temp, by = c("activity_name" = "act")) 
+    temp <- select(temp, tempCol)
+    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
     return(temp)
 }
 
@@ -182,20 +197,6 @@ edges_frequency <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
-nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
-    temp <- precedence %>%
-        group_by(act, from_id) %>%
-        summarize(n = as.double(n())) %>%
-        ungroup() %>%
-        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
-                                aggregationInstructions == "absolute" ~ n)) %>%
-        na.omit() %>%
-        select(act,tempCol)
-    temp <- left_join(nodes, temp, by = c("activity_name" = "act")) 
-    temp <- select(temp, tempCol)
-    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
-    return(temp)
-}
 
 if_start_or_end <- function(node, true, false) {
     ifelse(node %in% c("Start","End"), true, false)
@@ -263,6 +264,7 @@ enriched_process_map <- function(eventlog , aggregationInstructions =  list(freq
                        style = "rounded,filled",
                        tooltip = nodes$tooltip,
                        penwidth = 1.5,
+                       fixedsize = FALSE,
                        fontname = "Arial") -> nodes_df
         aggregatedColumns<-as.data.table(lapply(aggregationInstructions,getNodesAggregation,nodes,base_precedence))
         #aggregatedColumns$activity_name <- nodes$activity_name
@@ -290,6 +292,13 @@ enriched_process_map <- function(eventlog , aggregationInstructions =  list(freq
                                 palette = "PuBu",
                                 default_color = "white",
                                 cut_points = seq(0, 100, length.out = 9))
+}
+
+if_end <- function(node, true, false) {
+    ifelse(node %in% c("Start","End"), true, false)
+}
+if_start <- function(node, true, false) {
+    ifelse(node %in% c("Start"), true, false)
 }
 
     
