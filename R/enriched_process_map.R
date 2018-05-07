@@ -91,6 +91,21 @@ edges_performance <- function(precedence, aggregationInstructions) {
     return(temp)
 }
 
+
+edges_frequency <- function(precedence, aggregationInstructions) {
+    temp <- precedence %>%
+        ungroup() %>%
+        group_by(act, from_id, next_act, to_id) %>%
+        summarize(n = as.double(n())) %>%
+        ungroup() %>%
+        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
+                                   aggregationInstructions == "absolute" ~ n)) %>%
+        na.omit() %>%
+        select(act,tempCol)
+    colnames(temp)<-c("activity_name",attr(aggregationInstructions, "columnName"))
+    return(temp)
+}
+
 edges_columnAgregate <- function(precedence, aggregationInstructions) {
     columnName <-  attr(aggregationInstructions, "columnNameIn")
     columnNamex <- paste0("^",columnName,".x$")
@@ -160,6 +175,7 @@ nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
     return(temp)
 }
 
+
 nodes_columnAgregate <- function(nodes, precedence, aggregationInstructions) {
     names(precedence) <- sub(attr(aggregationInstructions, "columnNameIn"), "aggrCol", names(precedence))
     if (!is.numeric( precedence$aggrCol )){
@@ -183,19 +199,6 @@ nodes_columnAgregate <- function(nodes, precedence, aggregationInstructions) {
     return(temp)
 }
 
-edges_frequency <- function(precedence, aggregationInstructions) {
-    temp <- precedence %>%
-        ungroup() %>%
-        group_by(act, from_id, next_act, to_id) %>%
-        summarize(n = as.double(n())) %>%
-        ungroup() %>%
-        mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
-                                 aggregationInstructions == "absolute" ~ n)) %>%
-        na.omit() %>%
-        select(act,tempCol)
-    colnames(temp)<-c("activity_name",attr(aggregationInstructions, "columnName"))
-    return(temp)
-}
 
 
 if_start_or_end <- function(node, true, false) {

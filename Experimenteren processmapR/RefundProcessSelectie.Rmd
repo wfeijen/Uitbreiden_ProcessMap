@@ -2,7 +2,7 @@
 title: "Untitled"
 author: "Willem Feijen"
 date: "16 februari 2018"
-output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -18,7 +18,7 @@ library(DiagrammeR)
 library(data.table)
 #library(DiagrammeRsvg)
 
-csvLog<-read.table("../RefundProcessSelectie.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
+csvLog<-read.table("W:/Uitbreiden_ProcessMap/RefundProcessSelectie.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend"))
 csvLog$status = "complete"
 csvLog$activity_instance = 1:nrow(csvLog)
 csvLog$startmoment<-as.POSIXct(strptime(csvLog$startmoment, "%d-%m-%Y  %H:%M"))
@@ -39,8 +39,6 @@ rm(csvLogStart,csvLogEind)
 
 csvLog<-na.omit(csvLog,cols=c("OrderNr","Status","timeStamp"))
 ```
-
-
 
 #Gevonden kolomkoppen:
 ```{r echo=FALSE, warning=T, error=T, message=T}
@@ -114,6 +112,7 @@ map <- map %>%
 ```{r}
 map  %>%
     export_graph(file_name = "Z:/Dump/Map met performance.svg",  file_type = "SVG")
+
 ```
 ![](`r "Z:/Dump/Map met performance.svg"`)
 
@@ -134,6 +133,51 @@ map <- map %>%
                       colorUpperbound = "gray50",
                       colorLowerbound = "gray100") %>%
     label_activities(columns =c("activity_name","xxx2")) %>%
+    color_transitions(column = "xxx2",
+          colorCaption = "black",
+          colorUpperbound = "gray0",
+          colorLowerbound = "gray50") %>%
+    label_transitions(columns = c("xxx2"))
+```
+
+```{r}
+map  %>%
+    export_graph(file_name = "Z:/Dump/Map met xxx2.svg",  file_type = "SVG")
+```
+![](`r "Z:/Dump/Map met xxx2.svg"`)
+
+# xxx1xxx2activiteit
+```{r}
+map <- map %>%
+    color_activities( column = "xxx2",
+                      colorCaption = "black",
+                      colorUpperbound = "lightblue",
+                      colorLowerbound = "green1") %>%
+    label_activities(columns =c("activity_name","xxx1","xxx2")) %>%
+    color_transitions(column = "xxx2",
+          colorCaption = "black",
+          colorUpperbound = "deeppink",
+          colorLowerbound = "darkgreen") %>%
+    label_transitions(columns = c("xxx1","xxx2"))
+```
+
+# Map met max en perf
+```{r}
+
+agregationInst = list(enriched_column_aggregate( FUN = sum, columnNameIn = "RandomWaarde1", columnNameOut = "xxx1", edgeOperation = "to"),enriched_column_aggregate( FUN = mean, columnNameIn = "RandomWaarde2", columnNameOut = "xxx2", edgeOperation = "mean"),enriched_performance(FUN = mean, columnName = "perf")
+                      )
+map<-enriched_process_map(eventLog.Base, aggregationInstructions = agregationInst )
+```
+
+
+# Map met xxx2
+```{r}
+map <- map %>%
+    color_activities( column = "xxx2",
+                      colorCaption = "black",
+                      colorUpperbound = "gray50",
+                      colorLowerbound = "gray100") %>%
+    label_activities(columns =c("activity_name","xxx1","xxx2")) %>%
     color_transitions(column = "xxx2",
           colorCaption = "black",
           colorUpperbound = "gray0",
@@ -186,10 +230,16 @@ map <- map %>%
 map %>% export_graph(file_name = "Z:/Dump/xxx2blind.svg",  file_type = "SVG")
 ```
 ![](`r "Z:/Dump/xxx2blind.svg"`)
-
-
 ```{r}
 
 ```
+
+
+
+
+
+
+
+
 
 
