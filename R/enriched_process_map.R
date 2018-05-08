@@ -74,25 +74,27 @@ GetBasicEdges <- function(precedence) {
         mutate(penwidth = 1,5)
 }
 
-edges_performance <- function(precedence, aggregationInstructions) {
+edges_performance <- function(precedence, aggregationInstructions, edges) {
     flow_time <- attr(aggregationInstructions, "flow_time")
     temp <- precedence %>%
         ungroup() %>%
         mutate(time = case_when(flow_time == "inter_start_time" ~ as.double(next_start_time - start_time, units = attr(aggregationInstructions, "units")),
-                                flow_time == "idle_time" ~ as.double(next_start_time - end_time, units = attr(aggregationInstructions, "units")))) %>%
-        group_by(act, next_act, from_id, to_id) %>%
+                                flow_time == "idle_time" ~ as.double(next_start_time - end_time, units = attr(aggregationInstructions, "units")))) 
+    temp <- temp %>%
+        group_by(act, from_id, next_act, to_id) %>%
         summarize(aggr = aggregationInstructions(time)) %>%
-        na.omit() %>%
         ungroup() %>%
-        mutate(temp = aggr) %>%
-        na.omit() %>%
-        select(temp)
+        mutate(tempCol = aggr) %>%
+        na.omit() 
+    
+    temp <- left_join(edges[,c("act", "next_act")], temp) 
+    temp <- select(temp, tempCol)
     colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
     return(temp)
 }
 
 
-edges_frequency <- function(precedence, aggregationInstructions) {
+edges_frequency <- function(precedence, aggregationInstructions, edges) {
     temp <- precedence %>%
         ungroup() %>%
         group_by(act, from_id, next_act, to_id) %>%
@@ -100,9 +102,10 @@ edges_frequency <- function(precedence, aggregationInstructions) {
         ungroup() %>%
         mutate(tempCol = case_when(aggregationInstructions == "relative" ~ round(100*n/sum(n),2),
                                    aggregationInstructions == "absolute" ~ n)) %>%
-        na.omit() %>%
-        select(act,tempCol)
-    colnames(temp)<-c("activity_name",attr(aggregationInstructions, "columnName"))
+        na.omit() 
+    temp <- left_join(edges[,c("act", "next_act")], temp) 
+    temp <- select(temp, tempCol)
+    colnames(temp)<-c(attr(aggregationInstructions, "columnName"))
     return(temp)
 }
 
@@ -243,13 +246,13 @@ getNodesAggregation <- function(aggregationInstruction,nodes,base_precedence)
         nodes_columnAgregate(nodes, base_precedence, aggregationInstruction)
 }
 
-getEdgesAggregation <- function(aggregationInstruction,base_precedence)
+getEdgesAggregation <- function(aggregationInstruction,base_precedence, edges)
 {
     perspective <- attr(aggregationInstruction, "perspective")
     if(perspective == "frequency") 
-        edges_frequency(base_precedence, aggregationInstruction)
+        edges_frequency(base_precedence, aggregationInstruction, edges)
     else if(perspective == "performance")
-        edges_performance(base_precedence, aggregationInstruction)
+        edges_performance(base_precedence, aggregationInstruction, edges)
     else if(perspective == "columnAgregate")
         edges_columnAgregate(base_precedence, aggregationInstruction)
 }
@@ -284,7 +287,7 @@ enriched_process_map <- function(eventlog , aggregationInstructions =  list(freq
                        penwidth = edges$penwidth,
                        fontname = "Arial") -> edges_df
         
-        aggregatedEdges<-as.data.table(lapply(aggregationInstructions,getEdgesAggregation,base_precedence))
+        aggregatedEdges<-as.data.table(lapply(aggregationInstructions, getEdgesAggregation, base_precedence, edges))
         edges_df <- cbind(edges_df, aggregatedEdges)
         
         create_graph(nodes_df, edges_df)  %>%

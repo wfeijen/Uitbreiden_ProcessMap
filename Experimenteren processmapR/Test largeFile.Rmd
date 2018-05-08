@@ -21,7 +21,7 @@ library(anytime)
 library(processmapR)
 
 csvLog<-read.table("../largeFile.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend","-", "NA"))
-csvLog$timeStamp <- anydate(csvLog$timeStamp)#as.POSIXct(strptime(csvLog$timeStamp, "%d-%m-%Y"))
+csvLog$timeStamp <- as.POSIXct(strptime(csvLog$timeStamp, "%d-%m-%Y"))
 ```
 
 #Gevonden kolomkoppen:
@@ -45,9 +45,16 @@ eventLog.Base<-eventlog(csvLog,
 ```{r}
 graphStandaard <- process_map(eventLog.Base, type = performance(),render = FALSE )
 graphStandaard %>%
-    export_graph(file_name = "Z:/Dump/mapMetStandaardFunctie.svg",  file_type = "SVG")
+    export_graph(file_name = "Z:/Dump/mapPerformanceMetStandaardFunctie.svg",  file_type = "SVG")
 ```
-![](`r "Z:/Dump/mapMetStandaardFunctie.svg"`)
+![](`r "Z:/Dump/mapMetStandaardPerformanceFunctie.svg"`)
+
+```{r}
+graphStandaard <- process_map(eventLog.Base, type = frequency(),render = FALSE )
+graphStandaard %>%
+    export_graph(file_name = "Z:/Dump/mapFrequencyMetStandaardFunctie.svg",  file_type = "SVG")
+```
+![](`r "Z:/Dump/mapFrequencyMetStandaardFunctie.svg"`)
 
 # Map met frequency
 ```{r}
