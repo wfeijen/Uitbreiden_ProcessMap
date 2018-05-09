@@ -48,6 +48,7 @@ color_activities <- function( diagrammerProcessMap,
             to_lower_bound = colorCaption,
             to_upper_bound = colorCaption,
             node_attr_to = color) %>% 
+        clear_selection()%>%
         select_nodes(conditions = activity_name == "Start") %>%
             set_node_attrs_ws( node_attr = fillcolor,value = "white") %>%
             set_node_attrs_ws( node_attr = color,value = colorStart) %>%
