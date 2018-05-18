@@ -122,6 +122,8 @@ edges_columnAgregate <- function(precedence, aggregationInstructions) {
         inner_join(columnValues, by = c( "case" = "case","next_act" = "act", "next_aid" = "aid")) #
     names(p) <- sub(columnNamex, "aggrFirst", names(p))
     names(p) <- sub(columnNamey, "aggrSecond", names(p))
+    p$aggrFirst <- as.numeric(p$aggrFirst)
+    p$aggrSecond <- as.numeric(p$aggrSecond)
     p$calcColumn <- case_when(
         edgeOperation == "mean" ~  as.double(rowMeans(data.frame(p$aggrFirst,p$aggrSecond))),
         edgeOperation == "min" ~  as.double(do.call(pmin, data.frame(p$aggrFirst,p$aggrSecond))),
@@ -181,6 +183,7 @@ nodes_frequency <- function(nodes, precedence, aggregationInstructions) {
 
 nodes_columnAgregate <- function(nodes, precedence, aggregationInstructions) {
     names(precedence) <- sub(attr(aggregationInstructions, "columnNameIn"), "aggrCol", names(precedence))
+    precedence$aggrCol <- as.numeric(precedence$aggrCol)
     if (!is.numeric( precedence$aggrCol )){
         stop(paste0("The column: ",attr(aggregationInstructions, "columnNameIn"), " is not numerical."))
     }

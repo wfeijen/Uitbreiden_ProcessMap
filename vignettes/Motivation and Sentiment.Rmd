@@ -1,0 +1,80 @@
+---
+title: "Motivation and Sentiment"
+author: "Willem Feijen"
+date: "18 mei 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(bupaR)
+library(edeaR)
+library(processmonitR)
+library(plotluck)
+library(DiagrammeR)
+library(data.table)
+#library(DiagrammeRsvg)
+
+csvLog<-read.table("../Motivation.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend",""))
+csvLog$status = "complete"
+csvLog$activity_instance = 1:nrow(csvLog)
+csvLog$timestamp<-as.POSIXct(strptime(csvLog$Timestamp, "%d-%m-%Y"))
+
+
+kolomNamen<-colnames(csvLog)
+csvLog$activity_instance = 1:nrow(csvLog)
+csvLog$status<-"start"
+csvLog$SentimentGem <- as.numeric(csvLog$SentimentGem)
+```
+
+#Gevonden kolomkoppen:
+```{r echo=FALSE, warning=T, error=T, message=T}
+colnames(csvLog)
+```
+
+#Omzetten naar een processmining Log 
+```{r echo=FALSE, warning=FALSE}
+if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
+eventLog.Base<-eventlog(csvLog,
+        case_id = "CaseNr",
+        activity_id = "Motivatie_totaal",
+        activity_instance_id = "activity_instance",
+        lifecycle_id = "status",
+        timestamp = "timestamp",
+        resource_id = "SentimentGem"
+    )
+```
+# Map met standaard functie
+```{r}
+graphStandaard <- process_map(eventLog.Base, type = performance(),render = FALSE )
+graphStandaard %>%
+    export_graph(file_name = "Z:/Dump/mapMetStandaardFunctie.svg",  file_type = "SVG")
+```
+![](`r "Z:/Dump/mapMetStandaardFunctie.svg"`)
+
+# Map met SentimentGem
+```{r}
+fileName <- "SentimentGem"
+agregationInst = list( enriched_frequency(value = "absolute", columnName = "aantal"),enriched_column_aggregate( FUN = mean, columnNameIn = "SentimentGem", columnNameOut = "SentimentGem", edgeOperation = "mean") )
+map<-enriched_process_map(eventLog.Base, aggregationInstructions = agregationInst )
+map <- map %>%
+    processmapR::color_activities( column = "SentimentGem",
+                      colorCaption = "black",
+                      colorUpperbound = "deeppink",
+                      colorLowerbound = "green1") %>%
+    label_activities(columns =c("activity_name","SentimentGem")) %>%
+          color_transitions(column = "SentimentGem",
+          colorCaption = "black",
+          colorUpperbound = "deeppink",
+          colorLowerbound = "darkgreen") %>%
+    label_transitions(columns = c("SentimentGem")) 
+
+map %>% export_graph(file_name = "Z:/Dump/SentimentGem.svg",  file_type = "SVG")
+```
+![](`r "Z:/Dump/SentimentGem.svg"`)
+```{r}
+
+```
