@@ -58,7 +58,7 @@ graphStandaard %>%
 # Map met SentimentGem
 ```{r}
 fileName <- "SentimentGem"
-agregationInst = list( enriched_frequency(value = "absolute", columnName = "aantal"),enriched_column_aggregate( FUN = mean, columnNameIn = "SentimentGem", columnNameOut = "SentimentGem", edgeOperation = "mean") )
+agregationInst = list( enriched_frequency(value = "absolute", columnName = "aantal"),enriched_column_aggregate( FUN = mean, columnNameIn = "SentimentGem", columnNameOut = "SentimentGem", edgeOperation = "to") )
 map<-enriched_process_map(eventLog.Base, aggregationInstructions = agregationInst )
 map <- map %>%
     processmapR::color_activities( column = "SentimentGem",
@@ -71,6 +71,8 @@ map <- map %>%
           colorUpperbound = "deeppink",
           colorLowerbound = "darkgreen") %>%
     label_transitions(columns = c("SentimentGem")) 
+
+x<- get_node_df(map)
 
 map %>% export_graph(file_name = "Z:/Dump/SentimentGem.svg",  file_type = "SVG")
 ```

@@ -110,10 +110,10 @@ map <- map %>%
 
 ```{r}
 map  %>%
-    export_graph(file_name = "Z:/Dump/Map met performance.svg",  file_type = "SVG")
+    export_graph(file_name = "Z:/Dump/Map met performance1.svg",  file_type = "SVG")
 
 ```
-![](`r "Z:/Dump/Map met performance.svg"`)
+![](`r "Z:/Dump/Map met performance1.svg"`)
 
 # Map met aggregate en perf
 ```{r}
@@ -186,9 +186,9 @@ map <- map %>%
 
 ```{r}
 map  %>%
-    export_graph(file_name = "Z:/Dump/Map met xxx2.svg",  file_type = "SVG")
+    export_graph(file_name = "Z:/Dump/Map met xxx22.svg",  file_type = "SVG")
 ```
-![](`r "Z:/Dump/Map met xxx2.svg"`)
+![](`r "Z:/Dump/Map met xxx22.svg"`)
 
 # xxx1xxx2activiteit
 ```{r}
