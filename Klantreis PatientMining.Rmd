@@ -1,7 +1,7 @@
 ---
-title: "Motivation and Sentiment"
+title: "Klantreis deelnemers"
 author: "Willem Feijen"
-date: "18 mei 2018"
+date: "8 juni 2018"
 output:
   html_document:
     df_print: paged
@@ -11,7 +11,15 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r echo=FALSE, warning=F, error=F, message=F}
+#Initialisatie Let op de slashes / staan anders dan Windows ze zet \.
+eventLogName <- "W:/Uitbreiden_ProcessMap/LogPatientMining.csv"
+#eventLogName <- "W:/Uitbreiden_ProcessMap/Motivation.csv"
+```
+
+
+
+```{r echo=FALSE, warning=F, error=F, message=F}
 library(bupaR)
 library(edeaR)
 library(processmonitR)
@@ -20,7 +28,7 @@ library(DiagrammeR)
 library(data.table)
 #library(DiagrammeRsvg)
 
-csvLog<-read.table("../Motivation.csv",header = TRUE, sep = ";",na = c("n.v.t.","onbekend",""))
+csvLog<-read.table(eventLogName,header = TRUE, sep = ";",na = c("n.v.t.","onbekend",""))
 csvLog$status = "complete"
 csvLog$activity_instance = 1:nrow(csvLog)
 csvLog$timestamp<-as.POSIXct(strptime(csvLog$Timestamp, "%d-%m-%Y"))
@@ -29,50 +37,47 @@ csvLog$timestamp<-as.POSIXct(strptime(csvLog$Timestamp, "%d-%m-%Y"))
 kolomNamen<-colnames(csvLog)
 csvLog$activity_instance = 1:nrow(csvLog)
 csvLog$status<-"start"
-csvLog$SentimentGem <- as.numeric(csvLog$SentimentGem)
+csvLog$SentimentGem <- as.numeric(csvLog$Waardering)
 ```
 
+
+```{r echo=FALSE, warning=F, error=F, message=F}
 #Gevonden kolomkoppen:
-```{r echo=FALSE, warning=T, error=T, message=T}
-colnames(csvLog)
+#colnames(csvLog)
 ```
 
+
+```{r echo=FALSE, warning=F, error=F, message=F}
 #Omzetten naar een processmining Log 
-```{r echo=FALSE, warning=FALSE}
 if (!("Werknemer" %in% colnames(csvLog))){csvLog$Werknemer<-NA}
 eventLog.Base<-eventlog(csvLog,
-        case_id = "CaseNr",
-        activity_id = "Motivatie_totaal",
+        case_id = "Voornaam",
+        activity_id = "Mapping",
         activity_instance_id = "activity_instance",
         lifecycle_id = "status",
         timestamp = "timestamp",
         resource_id = "SentimentGem"
     )
 ```
-# Map met standaard functie
-```{r}
-graphStandaard <- process_map(eventLog.Base, type = performance(),render = FALSE )
-graphStandaard %>%
-    export_graph(file_name = "Z:/Dump/mapMetStandaardFunctie.svg",  file_type = "SVG")
-```
-![](`r "Z:/Dump/mapMetStandaardFunctie.svg"`)
-
 # Map met SentimentGem
-```{r}
+
+De getallen en de kleuren in de activiteiten geven het gemiddelde sentiment weer.
+De getallen, kleuren en dikte van de lijnen geven het aantal malen weer dat dat pad doorlopen is.
+```{r echo=FALSE, warning=F, error=F, message=F}
 fileName <- "SentimentGem"
 agregationInst = list( enriched_frequency(value = "absolute", columnName = "aantal"),enriched_column_aggregate( FUN = mean, columnNameIn = "SentimentGem", columnNameOut = "SentimentGem", edgeOperation = "to") )
 map<-enriched_process_map(eventLog.Base, aggregationInstructions = agregationInst )
 map <- map %>%
     processmapR::color_activities( column = "SentimentGem",
                       colorCaption = "black",
-                      colorUpperbound = "deeppink",
-                      colorLowerbound = "green1") %>%
+                      colorUpperbound = "darkseagreen1",
+                      colorLowerbound = "lightsalmon1") %>%
     label_activities(columns =c("activity_name","SentimentGem")) %>%
-          color_transitions(column = "SentimentGem",
+    color_transitions(column = "aantal",
           colorCaption = "black",
-          colorUpperbound = "deeppink",
-          colorLowerbound = "darkgreen") %>%
-    label_transitions(columns = c("SentimentGem")) 
+          colorUpperbound = "gray0",
+          colorLowerbound = "gray50") %>%
+    label_transitions(columns = c("aantal")) 
 
 x<- get_node_df(map)
 

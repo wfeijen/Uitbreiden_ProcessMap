@@ -2,7 +2,9 @@
 title: "Untitled"
 author: "Willem Feijen"
 date: "4 mei 2018"
-output: word_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
